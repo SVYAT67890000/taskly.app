@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Друзья — Taskly</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+
+  <nav class="navbar-modern">
+    <div class="container">
+      <div class="navbar-content">
+        <a class="navbar-brand-modern" href="index.html">
+          <span class="brand-text">Taskly</span>
+        </a>
+        <div class="navbar-right">
+          <button class="theme-toggle-btn-header" id="themeToggle" title="Переключить тему">
+            <span class="theme-icon-header">🌙</span>
+          </button>
+          <div class="user-menu-container">
+            <button class="user-menu-btn" id="userMenuBtn" type="button" title="Меню пользователя">
+              <span class="user-avatar" id="userAvatar"></span>
+              <span class="user-name" id="userName">Пользователь</span>
+              <span class="menu-arrow">▼</span>
+            </button>
+            <div class="user-menu-dropdown" id="userMenuDropdown">
+              <div class="user-menu-header">
+                <div class="user-menu-avatar" id="menuUserAvatar"></div>
+                <div class="user-menu-info">
+                  <div class="user-menu-username" id="menuUserName">Пользователь</div>
+                  <div class="user-menu-email" id="menuUserEmail">email@example.com</div>
+                </div>
+              </div>
+              <div class="user-menu-divider"></div>
+              <ul class="user-menu-list">
+                <li class="user-menu-item">
+                  <a href="profile.html" class="user-menu-link">
+                    <span class="menu-item-icon"></span>
+                    <span>Профиль</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="friends.html" class="user-menu-link active">
+                    <span class="menu-item-icon"></span>
+                    <span>Друзья</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="index.html" class="user-menu-link">
+                    <span class="menu-item-icon"></span>
+                    <span>Мои задачи</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="calendar.html" class="user-menu-link">
+                    <span class="menu-item-icon"></span>
+                    <span>Календарь</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="#" class="user-menu-link" id="menuLogoutBtn">
+                    <span class="menu-item-icon"></span>
+                    <span>Выйти из аккаунта</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="friends-page">
+    <div class="container-fluid">
+      <div class="friends-layout">
+        <aside class="friends-panel">
+          <div class="friends-panel-header">
+            <h2>Друзья</h2>
+            <button class="btn-secondary" id="refreshFriendsBtn">Обновить</button>
+          </div>
+          <div class="friends-search">
+            <input type="email" class="form-input-modern" id="friendEmailInput" placeholder="Email пользователя">
+            <button class="btn-primary" id="sendFriendRequestBtn">Отправить заявку</button>
+          </div>
+
+          <div class="friends-section">
+            <h3>Ваши друзья</h3>
+            <div id="friendsList" class="friends-list empty-state-sm">
+              <p>Пока нет друзей. Добавьте кого-нибудь!</p>
+            </div>
+          </div>
+        </aside>
+
+        <main class="friends-chat">
+          <div class="chat-header">
+            <div class="chat-user">
+              <div>
+                <h3 id="chatUserName">Выберите собеседника</h3>
+                <p id="chatUserStatus">Чтобы начать переписку, выберите друга слева.</p>
+              </div>
+            </div>
+            <button class="btn-secondary" id="removeFriendBtn" disabled>Удалить из друзей</button>
+          </div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-placeholder">
+              <p>Здесь появятся сообщения.</p>
+            </div>
+          </div>
+          <form class="chat-input" id="chatForm">
+            <textarea id="chatMessageInput" placeholder="Напишите сообщение..." rows="2"></textarea>
+            <button type="submit" class="btn-primary" disabled id="sendChatBtn">Отправить</button>
+          </form>
+        </main>
+
+        <aside class="friends-requests">
+          <div class="friends-section">
+            <h3>Входящие заявки</h3>
+            <div id="incomingRequests" class="requests-list empty-state-sm">
+              <p>Нет входящих заявок.</p>
+            </div>
+          </div>
+          <div class="friends-section">
+            <h3>Исходящие заявки</h3>
+            <div id="outgoingRequests" class="requests-list empty-state-sm">
+              <p>Нет исходящих заявок.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern">
+      <div class="modal-content-modern">
+        <div class="modal-header-modern">
+          <div class="modal-header-content">
+            <h5 class="modal-title-modern">
+              Подтвердите выход
+            </h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body-modern">
+          <p>Вы действительно хотите выйти из аккаунта?</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn-submit" id="confirmLogoutBtn">
+            <span>Выйти</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="scripts/theme.js"></script>
+  <script src="scripts/notifications.js"></script>
+  <script src="scripts/auth.js"></script>
+  <script src="scripts/friends.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Календарь задач — Taskly</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+
+  <!-- Навигация -->
+  <nav class="navbar-modern">
+    <div class="container">
+      <div class="navbar-content">
+        <a class="navbar-brand-modern" href="index.html">
+          <span class="brand-text">Taskly</span>
+        </a>
+        <div class="navbar-right">
+          <button class="theme-toggle-btn-header" id="themeToggle" title="Переключить тему">
+            <span class="theme-icon-header">🌙</span>
+          </button>
+          <div class="user-menu-container">
+            <button class="user-menu-btn" id="userMenuBtn" type="button" title="Меню пользователя">
+              <span class="user-avatar" id="userAvatar"></span>
+              <span class="user-name" id="userName">Пользователь</span>
+              <span class="menu-arrow">▼</span>
+            </button>
+            <div class="user-menu-dropdown" id="userMenuDropdown">
+              <div class="user-menu-header">
+                <div class="user-menu-avatar" id="menuUserAvatar"></div>
+                <div class="user-menu-info">
+                  <div class="user-menu-username" id="menuUserName">Пользователь</div>
+                  <div class="user-menu-email" id="menuUserEmail">email@example.com</div>
+                </div>
+              </div>
+              <div class="user-menu-divider"></div>
+              <ul class="user-menu-list">
+                <li class="user-menu-item">
+                  <a href="profile.html" class="user-menu-link">
+                    <span class="menu-item-icon"></span>
+                    <span>Профиль</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="friends.html" class="user-menu-link">
+                    <span class="menu-item-icon"></span>
+                    <span>Друзья</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="index.html" class="user-menu-link">
+                    <span class="menu-item-icon"></span>
+                    <span>Мои задачи</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="calendar.html" class="user-menu-link active">
+                    <span class="menu-item-icon"></span>
+                    <span>Календарь</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="#" class="user-menu-link" id="menuLogoutBtn">
+                    <span class="menu-item-icon"></span>
+                    <span>Выйти из аккаунта</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Основной контент -->
+  <div class="main-container">
+    <div class="container-fluid">
+      <div class="row g-4">
+        <!-- Левая колонка: кнопки и фильтры -->
+        <div class="col-lg-3 col-md-4 col-12">
+          <div class="sidebar-modern">
+            <div class="sidebar-header">
+              <h2 class="sidebar-title">Календарь</h2>
+            </div>
+            
+            <button class="btn-add-task" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+              <span class="btn-icon">+</span>
+              <span>Создать задачу</span>
+            </button>
+
+            <div class="projects-section">
+              <div class="projects-header">
+                <h2 class="sidebar-title">Проекты</h2>
+                <button class="btn-manage-projects" data-bs-toggle="modal" data-bs-target="#projectModal">
+                  + Проект
+                </button>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Текущий проект</label>
+                <select class="filter-select" id="projectFilter">
+                  <option value="all">Все задачи</option>
+                  <option value="personal">Личные задачи</option>
+                </select>
+              </div>
+              <div class="project-overview-card" id="projectOverview">
+                <div class="project-overview-title">Выберите проект</div>
+                <p class="project-overview-text">Чтобы увидеть прогресс и участников, выберите проект из списка.</p>
+                <div class="project-progress">
+                  <div class="project-progress-track">
+                    <div class="project-progress-value" style="width:0%"></div>
+                  </div>
+                  <div class="project-progress-meta">
+                    <span class="project-progress-percent">0%</span>
+                    <span class="project-progress-summary">0 / 0 задач</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="offline-alert-modern d-none" id="offlineAlert">
+              <div class="alert-content">
+                <div class="alert-title">Оффлайн режим</div>
+                <div class="alert-text">Данные сохраняются локально</div>
+              </div>
+            </div>
+
+            <div class="reminder-widget" id="reminderWidget">
+              <div class="reminder-header">
+                <div>
+                  <h3 class="section-title">
+                    Напоминания
+                  </h3>
+                  <p class="reminder-subtitle">Управляйте уведомлениями о задачах.</p>
+                </div>
+                <label class="reminder-switch">
+                  <input type="checkbox" id="reminderToggle" class="reminder-switch-input">
+                  <span class="reminder-switch-slider"></span>
+                </label>
+              </div>
+              <div class="reminder-body">
+                <label class="filter-label">За сколько предупреждать</label>
+                <select class="filter-select" id="reminderLeadTime">
+                  <option value="0">В день задачи</option>
+                  <option value="1">За 1 день</option>
+                  <option value="3">За 3 дня</option>
+                  <option value="7">За неделю</option>
+                </select>
+                <div class="reminder-status" id="reminderStatus">Напоминания отключены</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Правая колонка: календарь -->
+        <div class="col-lg-9 col-md-8 col-12">
+          <div class="calendar-section">
+            <div class="calendar-header">
+              <h2 class="calendar-title">Календарь задач</h2>
+              <div class="calendar-controls">
+                <button class="calendar-nav-btn" id="prevMonth" title="Предыдущий месяц">‹</button>
+                <div class="calendar-month-year" id="currentMonthYear"></div>
+                <button class="calendar-nav-btn" id="nextMonth" title="Следующий месяц">›</button>
+                <button class="calendar-today-btn" id="todayBtn">Сегодня</button>
+              </div>
+            </div>
+            
+            <div class="calendar-container" id="calendarContainer">
+              <!-- Календарь будет отрисован через JS -->
+            </div>
+
+            <div class="calendar-legend">
+              <div class="legend-item">
+                <span class="legend-color legend-low"></span>
+                <span>Низкий приоритет</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color legend-medium"></span>
+                <span>Средний приоритет</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color legend-high"></span>
+                <span>Высокий приоритет</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно добавления задачи -->
+  <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern modal-large">
+      <div class="modal-content-modern">
+        <div class="modal-header-modern">
+          <div class="modal-header-content">
+            <h5 class="modal-title-modern" id="addTaskLabel">
+              <span>Новая задача</span>
+            </h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body-modern">
+          <form id="taskForm">
+            <div class="form-group-modern">
+              <label class="form-label-modern">Заголовок <span class="required">*</span></label>
+              <input type="text" class="form-input-modern" id="taskTitle" placeholder="Введите название задачи" required>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Описание</label>
+              <textarea class="form-input-modern form-textarea" id="taskDescription" rows="4" placeholder="Добавьте описание задачи (необязательно)"></textarea>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Проект</label>
+              <select class="form-input-modern" id="taskProject" data-assignees-target="taskAssignees">
+                <option value="">Без проекта</option>
+              </select>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Исполнители</label>
+              <select class="form-input-modern multiselect" id="taskAssignees" multiple></select>
+              <p class="form-hint">Держите Ctrl/Command, чтобы выбрать нескольких участников.</p>
+            </div>
+            <div class="form-row-modern">
+              <div class="form-group-modern">
+                <label class="form-label-modern">Дата выполнения</label>
+                <input type="date" class="form-input-modern" id="taskDate" required>
+              </div>
+              <div class="form-group-modern">
+                <label class="form-label-modern">Приоритет</label>
+                <select class="form-input-modern" id="taskPriority" required>
+                  <option value="low">🟢 Низкий</option>
+                  <option value="medium" selected>🟡 Средний</option>
+                  <option value="high">🔴 Высокий</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+              <button type="submit" class="btn-submit">
+                <span>Создать задачу</span>
+                <span class="btn-arrow">→</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно проекта -->
+  <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern">
+      <div class="modal-content-modern">
+        <div class="modal-header-modern">
+          <div class="modal-header-content">
+            <h5 class="modal-title-modern" id="projectModalLabel">
+              Новый проект
+            </h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body-modern">
+          <form id="projectForm">
+            <div class="form-group-modern">
+              <label class="form-label-modern">Название проекта <span class="required">*</span></label>
+              <input type="text" class="form-input-modern" id="projectName" placeholder="Например, «Редизайн сайта»" required>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Описание</label>
+              <textarea class="form-input-modern form-textarea" id="projectDescription" rows="3" placeholder="Кратко опишите цель проекта"></textarea>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Участники</label>
+              <select class="form-input-modern multiselect" id="projectMembers" multiple></select>
+              <p class="form-hint">Добавьте исполнителей. Вы автоматически станете руководителем проекта.</p>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+              <button type="submit" class="btn-submit">
+                <span>Создать проект</span>
+                <span class="btn-arrow">→</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно редактирования -->
+  <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern">
+      <div class="modal-content-modern">
+        <div class="modal-header-modern">
+          <div class="modal-header-content">
+            <h5 class="modal-title-modern" id="editTaskLabel">
+              Редактировать задачу
+            </h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body-modern">
+          <form id="editTaskForm">
+            <input type="hidden" id="editTaskId">
+            <div class="form-group-modern">
+              <label class="form-label-modern">Заголовок <span class="required">*</span></label>
+              <input type="text" class="form-input-modern" id="editTitle" placeholder="Введите название задачи" required>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Описание</label>
+              <textarea class="form-input-modern form-textarea" id="editDescription" rows="4" placeholder="Добавьте описание задачи"></textarea>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Проект</label>
+              <select class="form-input-modern" id="editTaskProject" data-assignees-target="editTaskAssignees">
+                <option value="">Без проекта</option>
+              </select>
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Исполнители</label>
+              <select class="form-input-modern multiselect" id="editTaskAssignees" multiple></select>
+              <p class="form-hint">Выберите участников, которые ответственны за выполнение задачи.</p>
+            </div>
+            <div class="form-row-modern">
+              <div class="form-group-modern">
+                <label class="form-label-modern">Дата выполнения</label>
+                <input type="date" class="form-input-modern" id="editDate" required>
+              </div>
+              <div class="form-group-modern">
+                <label class="form-label-modern">Приоритет</label>
+                <select class="form-input-modern" id="editPriority" required>
+                  <option value="low">🟢 Низкий</option>
+                  <option value="medium">🟡 Средний</option>
+                  <option value="high">🔴 Высокий</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group-modern">
+              <label class="checkbox-modern">
+                <input type="checkbox" id="editStatus" class="checkbox-input">
+                <span class="checkbox-label">
+                  <span class="checkbox-icon"></span>
+                  Задача выполнена
+                </span>
+              </label>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+              <button type="submit" class="btn-submit btn-update">
+                <span>Сохранить изменения</span>
+                <span class="btn-arrow">→</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern">
+      <div class="modal-content-modern">
+        <div class="modal-header-modern">
+          <div class="modal-header-content">
+            <h5 class="modal-title-modern">
+              Подтвердите выход
+            </h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body-modern">
+          <p>Вы действительно хотите выйти из аккаунта?</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn-submit" id="confirmLogoutBtn">
+            <span>Выйти</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="scripts/theme.js"></script>
+  <script src="scripts/notifications.js"></script>
+  <script src="scripts/auth.js"></script>
+  <script src="scripts/projects.js"></script>
+  <script src="scripts/notes.js"></script>
+  <script src="scripts/tasks.js"></script>
+  <script src="scripts/reminders.js"></script>
+  <script src="scripts/calendar.js"></script>
+  <script src="scripts/sync.js"></script>
+</body>
+</html>
+
