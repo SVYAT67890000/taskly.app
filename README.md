@@ -34,7 +34,6 @@ taskly.app/
 │   ├── scripts/      # JavaScript файлы
 │   ├── styles/       # CSS файлы
 │   └── assets/       # Изображения и другие ресурсы
-├── backend/          # Backend API (если нужно)
 ├── server.js         # Node.js сервер
 └── package.json      # Зависимости проекта
 ```
