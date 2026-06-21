@@ -30,11 +30,23 @@ API: http://localhost:3000/api
 
 ```
 taskly.app/
+<<<<<<< HEAD
 ├── data/              # SQLite
 ├── db/                # Схема и логика БД
 ├── server/api.js      # REST API
 ├── frontend/          # Клиент
 └── server.js
+=======
+├── frontend/          # Фронтенд приложения
+│   ├── index.html    # Главная страница
+│   ├── login.html    # Страница входа
+│   ├── register.html # Страница регистрации
+│   ├── scripts/      # JavaScript файлы
+│   ├── styles/       # CSS файлы
+│   └── assets/       # Изображения и другие ресурсы
+├── server.js         # Node.js сервер
+└── package.json      # Зависимости проекта
+>>>>>>> a51184d3a47d0a0d361d07e61520345bc3dfe00c
 ```
 
 ## Технологии
