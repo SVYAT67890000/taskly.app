@@ -1,6 +1,11 @@
 let currentUserData = null;
 let friendsLookup = {};
+let cachedUsers = [];
 let selectedFriendId = null;
+let selectedGroupId = null;
+let cachedConversations = [];
+let friendsPollTimer = null;
+let activeMobilePanel = 'friends';
 
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof getCurrentUser !== 'function') return;
@@ -9,39 +14,105 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = 'login.html';
     return;
   }
-  
+
+  initFromUrlParams();
   loadFriendsData();
   bindEvents();
+  setupMobilePanels();
+  if (typeof updateUnreadBadgesUI === 'function') updateUnreadBadgesUI();
+  friendsPollTimer = setInterval(() => {
+    loadFriendsData();
+    if (selectedFriendId || selectedGroupId) renderChatMessages();
+  }, 12000);
 });
 
-function bindEvents() {
-  const sendRequestBtn = document.getElementById('sendFriendRequestBtn');
-  sendRequestBtn?.addEventListener('click', handleSendRequest);
-  
-  const refreshBtn = document.getElementById('refreshFriendsBtn');
-  refreshBtn?.addEventListener('click', loadFriendsData);
-  
-  const chatForm = document.getElementById('chatForm');
-  chatForm?.addEventListener('submit', handleSendMessage);
-  
-  const removeBtn = document.getElementById('removeFriendBtn');
-  removeBtn?.addEventListener('click', removeSelectedFriend);
+function initFromUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const chat = params.get('chat');
+  const group = params.get('group');
+  const panel = params.get('panel');
+  if (group) {
+    selectedGroupId = group;
+    selectedFriendId = null;
+    if (typeof clearUnread === 'function') clearUnread(`grp:${group}`);
+  } else if (chat) {
+    selectedFriendId = chat;
+    selectedGroupId = null;
+    if (typeof clearUnread === 'function') clearUnread(chat);
+  }
+  if (panel) activeMobilePanel = panel;
 }
 
-function loadFriendsData() {
+function bindEvents() {
+  document.getElementById('sendFriendRequestBtn')?.addEventListener('click', handleSendRequest);
+  document.getElementById('refreshFriendsBtn')?.addEventListener('click', loadFriendsData);
+  document.getElementById('createGroupBtn')?.addEventListener('click', openCreateGroupModal);
+  document.getElementById('groupForm')?.addEventListener('submit', handleCreateGroup);
+  document.getElementById('chatForm')?.addEventListener('submit', handleSendMessage);
+  document.getElementById('removeFriendBtn')?.addEventListener('click', removeSelectedFriend);
+  document.getElementById('chatBackBtn')?.addEventListener('click', () => setMobilePanel('friends'));
+  document.getElementById('chatAttachBtn')?.addEventListener('click', attachToChat);
+}
+
+function setupMobilePanels() {
+  document.querySelectorAll('.friends-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => setMobilePanel(btn.dataset.panel));
+  });
+  setMobilePanel(activeMobilePanel);
+}
+
+function setMobilePanel(panel) {
+  activeMobilePanel = panel;
+  document.querySelectorAll('.friends-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.panel === panel);
+  });
+  document.querySelectorAll('[data-friends-panel]').forEach(el => {
+    el.classList.toggle('mobile-active', el.dataset.friendsPanel === panel);
+  });
+}
+
+async function loadFriendsData() {
   currentUserData = getCurrentUser();
   if (!currentUserData) return;
-  
+
+  try {
+    if (typeof TasklyApi !== 'undefined') {
+      const data = await TasklyApi.getFriends();
+      if (typeof mergeUsersCache === 'function') mergeUsersCache(data.users || []);
+      if (typeof updateFriendRequestsInUser === 'function') {
+        updateFriendRequestsInUser(data.friends, data.incoming, data.outgoing);
+      }
+      cachedUsers = data.users || getUsers();
+      friendsLookup = buildUsersMap(data.friends, cachedUsers);
+      renderFriendsList(data.friends);
+      renderRequests(data.incoming, data.outgoing, cachedUsers);
+      try {
+        const convData = await TasklyApi.getConversations();
+        cachedConversations = convData.conversations || [];
+      } catch (_) {
+        cachedConversations = [];
+      }
+      renderGroupChatsList();
+      updateChatHeader();
+      if (selectedFriendId || selectedGroupId) {
+        renderChatMessages();
+        if (window.innerWidth <= 768) setMobilePanel('chat');
+      }
+      return;
+    }
+  } catch (e) {
+    console.warn('Friends load:', e.message);
+  }
+
   const friendData = getFriendData();
-  friendsLookup = mapUsersById(friendData.friends);
-  
+  cachedUsers = getUsers();
+  friendsLookup = buildUsersMap(friendData.friends, cachedUsers);
   renderFriendsList(friendData.friends);
-  renderRequests(friendData.incoming, friendData.outgoing);
+  renderRequests(friendData.incoming, friendData.outgoing, cachedUsers);
   updateChatHeader();
 }
 
-function mapUsersById(idList) {
-  const users = typeof getUsers === 'function' ? getUsers() : [];
+function buildUsersMap(idList, users) {
   const map = {};
   idList.forEach(id => {
     const user = users.find(u => u.id === id);
@@ -53,14 +124,13 @@ function mapUsersById(idList) {
 function renderFriendsList(friendIds) {
   const listEl = document.getElementById('friendsList');
   if (!listEl) return;
-  
+
   if (!friendIds.length) {
     listEl.innerHTML = '<p>Пока нет друзей. Добавьте кого-нибудь!</p>';
-    selectedFriendId = null;
-    updateChatHeader();
+    if (!selectedFriendId) updateChatHeader();
     return;
   }
-  
+
   listEl.innerHTML = friendIds.map(id => {
     const user = friendsLookup[id];
     if (!user) return '';
@@ -76,88 +146,191 @@ function renderFriendsList(friendIds) {
       </button>
     `;
   }).join('');
-  
+
   listEl.querySelectorAll('.friend-item').forEach(item => {
     item.addEventListener('click', () => {
       selectedFriendId = item.getAttribute('data-id');
-      listEl.querySelectorAll('.friend-item').forEach(btn => btn.classList.remove('active'));
+      selectedGroupId = null;
+      if (typeof clearUnread === 'function') clearUnread(selectedFriendId);
+      listEl.querySelectorAll('.friend-item, .group-item').forEach(btn => btn.classList.remove('active'));
       item.classList.add('active');
       updateChatHeader();
       renderChatMessages();
+      if (window.innerWidth <= 768) setMobilePanel('chat');
     });
   });
+
+  if (typeof updateUnreadBadgesUI === 'function') updateUnreadBadgesUI();
 }
 
-function renderRequests(incomingIds, outgoingIds) {
-  renderRequestsList('incomingRequests', incomingIds, true);
-  renderRequestsList('outgoingRequests', outgoingIds, false);
+function renderGroupChatsList() {
+  const listEl = document.getElementById('groupChatsList');
+  if (!listEl) return;
+
+  if (!cachedConversations.length) {
+    listEl.innerHTML = '<p class="friends-hint">Создайте беседу с друзьями.</p>';
+    return;
+  }
+
+  listEl.innerHTML = cachedConversations.map(conv => {
+    const active = conv.id === selectedGroupId ? 'active' : '';
+    const unreadKey = `grp:${conv.id}`;
+    return `
+      <button class="group-item friend-item ${active}" data-id="${unreadKey}" data-group-id="${conv.id}">
+        <div class="friend-avatar group-avatar"><ion-icon name="people-outline"></ion-icon></div>
+        <div class="friend-details">
+          <span class="friend-name">${escapeHtml(conv.name)}</span>
+          <span class="friend-status">${(conv.memberIds || []).length} участн.</span>
+        </div>
+      </button>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.group-item').forEach(item => {
+    item.addEventListener('click', () => {
+      selectedGroupId = item.dataset.groupId;
+      selectedFriendId = null;
+      if (typeof clearUnread === 'function') clearUnread(`grp:${selectedGroupId}`);
+      document.querySelectorAll('.friend-item, .group-item').forEach(btn => btn.classList.remove('active'));
+      item.classList.add('active');
+      updateChatHeader();
+      renderChatMessages();
+      if (window.innerWidth <= 768) setMobilePanel('chat');
+    });
+  });
+
+  if (typeof updateUnreadBadgesUI === 'function') updateUnreadBadgesUI();
 }
 
-function renderRequestsList(elementId, ids, incoming) {
+function openCreateGroupModal() {
+  const select = document.getElementById('groupMembers');
+  if (!select) return;
+  const friends = Object.keys(friendsLookup);
+  select.innerHTML = friends.map(id => {
+    const user = friendsLookup[id];
+    return `<option value="${id}">${escapeHtml(user.username || user.email)}</option>`;
+  }).join('');
+  if (typeof bootstrap !== 'undefined') {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('groupModal')).show();
+  }
+}
+
+async function handleCreateGroup(event) {
+  event.preventDefault();
+  const name = document.getElementById('groupName')?.value.trim();
+  const select = document.getElementById('groupMembers');
+  const memberIds = Array.from(select?.selectedOptions || []).map(o => o.value);
+  if (!name) {
+    showNotification?.('Введите название беседы', { type: 'warning' });
+    return;
+  }
+  if (!memberIds.length) {
+    showNotification?.('Выберите хотя бы одного друга', { type: 'warning' });
+    return;
+  }
+  try {
+    const data = await TasklyApi.createConversation({ name, memberIds });
+    document.getElementById('groupForm')?.reset();
+    bootstrap.Modal.getInstance(document.getElementById('groupModal'))?.hide();
+    selectedGroupId = data.conversation.id;
+    selectedFriendId = null;
+    await loadFriendsData();
+    setMobilePanel('chat');
+    showNotification?.('Беседа создана', { type: 'success' });
+  } catch (e) {
+    showNotification?.(e.message || 'Не удалось создать беседу', { type: 'warning' });
+  }
+}
+
+function renderRequests(incomingIds, outgoingIds, users) {
+  renderRequestsList('incomingRequests', incomingIds, true, users);
+  renderRequestsList('outgoingRequests', outgoingIds, false, users);
+}
+
+function renderRequestsList(elementId, ids, incoming, users) {
   const container = document.getElementById(elementId);
   if (!container) return;
-  
+
   if (!ids.length) {
     container.innerHTML = `<p>${incoming ? 'Нет входящих заявок.' : 'Нет исходящих заявок.'}</p>`;
     return;
   }
-  
-  const users = getUsers();
+
+  const userList = users || getUsers();
   container.innerHTML = ids.map(id => {
-    const user = users.find(u => u.id === id);
-    if (!user) return '';
-    const avatar = renderAvatarHTML(user.avatar);
+    const user = userList.find(u => u.id === id);
+    const name = user ? (user.username || user.email) : 'Пользователь';
+    const tag = user ? (user.tag || user.email) : id.slice(0, 8);
+    const avatar = user ? renderAvatarHTML(user.avatar) : '<span class="avatar-chip">👤</span>';
     return `
       <div class="request-item">
         <div class="request-user">
           <div class="request-avatar">${avatar}</div>
-          <div>
-            <div class="request-name">${escapeHtml(user.username || user.email)}</div>
-            <div class="request-email">${escapeHtml(user.email)}</div>
+          <div class="request-user-info">
+            <div class="request-name">${escapeHtml(name)}</div>
+            <div class="request-email">${escapeHtml(tag)}</div>
           </div>
         </div>
         <div class="request-actions">
           ${incoming ? `
-            <button class="btn-primary btn-sm" data-action="accept" data-id="${id}">Принять</button>
-            <button class="btn-secondary btn-sm" data-action="decline" data-id="${id}">Отклонить</button>
+            <button class="btn-primary btn-sm request-btn" data-action="accept" data-id="${id}">Принять</button>
+            <button class="btn-secondary btn-sm request-btn" data-action="decline" data-id="${id}">Отклонить</button>
           ` : `
-            <button class="btn-secondary btn-sm" data-action="cancel" data-id="${id}">Отменить</button>
+            <button class="btn-secondary btn-sm request-btn" data-action="cancel" data-id="${id}">Отменить</button>
           `}
         </div>
       </div>
     `;
   }).join('');
-  
+
   container.querySelectorAll('button[data-id]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const friendId = btn.getAttribute('data-id');
       const action = btn.getAttribute('data-action');
-      if (incoming) {
-        respondFriendRequest(friendId, action === 'accept');
-      } else {
-        cancelFriendRequest(friendId);
-      }
+      if (incoming) await respondFriendRequest(friendId, action === 'accept');
+      else await cancelFriendRequest(friendId);
       loadFriendsData();
     });
   });
 }
 
+let chatDraftAttachments = [];
+
+async function attachToChat() {
+  const files = await pickFiles();
+  if (!files.length) return;
+  chatDraftAttachments.push(...await uploadFiles(files));
+  showNotification?.(`Прикреплено файлов: ${chatDraftAttachments.length}`, { type: 'info', silent: true });
+}
+
 function updateChatHeader() {
   const nameEl = document.getElementById('chatUserName');
   const statusEl = document.getElementById('chatUserStatus');
-  const avatarEl = document.getElementById('chatUserAvatar');
   const removeBtn = document.getElementById('removeFriendBtn');
   const sendBtn = document.getElementById('sendChatBtn');
   const chatInput = document.getElementById('chatMessageInput');
-  
+  const sharedBox = document.getElementById('friendSharedTasks');
+
+  if (selectedGroupId) {
+    const conv = cachedConversations.find(c => c.id === selectedGroupId);
+    nameEl.textContent = conv?.name || 'Беседа';
+    statusEl.textContent = conv ? `${(conv.memberIds || []).length} участников` : 'Групповой чат';
+    removeBtn.disabled = true;
+    sendBtn.disabled = !conv;
+    chatInput.disabled = !conv;
+    if (sharedBox) {
+      sharedBox.classList.add('d-none');
+      sharedBox.innerHTML = '';
+    }
+    if (!conv) {
+      document.getElementById('chatMessages').innerHTML = '<div class="chat-placeholder"><p>Беседа не найдена.</p></div>';
+    }
+    return;
+  }
+
   if (!selectedFriendId || !friendsLookup[selectedFriendId]) {
     nameEl.textContent = 'Выберите собеседника';
-    statusEl.textContent = 'Чтобы начать переписку, выберите друга слева.';
-    if (avatarEl) {
-      avatarEl.textContent = '🤝';
-      avatarEl.classList.remove('has-image');
-      avatarEl.style.backgroundImage = '';
-    }
+    statusEl.textContent = 'Чтобы начать переписку, выберите друга.';
     removeBtn.disabled = true;
     sendBtn.disabled = true;
     chatInput.disabled = true;
@@ -165,53 +338,113 @@ function updateChatHeader() {
     document.getElementById('chatMessages').innerHTML = '<div class="chat-placeholder"><p>Здесь появятся сообщения.</p></div>';
     return;
   }
-  
+
   const friend = friendsLookup[selectedFriendId];
   nameEl.textContent = friend.username || friend.email;
   statusEl.textContent = friend.status || 'Онлайн';
-  if (typeof applyAvatarToElement === 'function') {
-    applyAvatarToElement(avatarEl, friend.avatar);
-  } else if (avatarEl) {
-    avatarEl.textContent = friend.avatar?.value || '👤';
-  }
   removeBtn.disabled = false;
   sendBtn.disabled = false;
   chatInput.disabled = false;
+  loadFriendSharedTasks(selectedFriendId);
 }
 
-function renderChatMessages() {
+async function loadFriendSharedTasks(friendId) {
+  const box = document.getElementById('friendSharedTasks');
+  if (!box) return;
+  try {
+    const tasks = await TasklyApi.getFriendSharedTasks(friendId);
+    if (!tasks.length) {
+      box.classList.add('d-none');
+      box.innerHTML = '';
+      return;
+    }
+    box.classList.remove('d-none');
+    box.innerHTML = `<h4>Общие задачи друга</h4>${tasks.map(t => `
+      <div class="shared-task-item"><strong>${escapeHtml(t.title)}</strong> — ${t.date || 'без срока'}</div>
+    `).join('')}`;
+  } catch (_) {
+    box.classList.add('d-none');
+  }
+}
+
+async function renderChatMessages() {
   const messagesEl = document.getElementById('chatMessages');
-  if (!messagesEl || !selectedFriendId) return;
-  
-  const messages = loadConversationMessages(selectedFriendId);
+  if (!messagesEl) return;
+
+  if (selectedGroupId) {
+    let messages = [];
+    try {
+      const data = await TasklyApi.getConversationMessages(selectedGroupId);
+      messages = data.messages || [];
+    } catch (_) {
+      messages = [];
+    }
+    if (!messages.length) {
+      messagesEl.innerHTML = '<div class="chat-placeholder"><p>Пока нет сообщений.</p></div>';
+      return;
+    }
+    messagesEl.innerHTML = messages.map(msg => {
+      const isMine = msg.from === currentUserData.id;
+      const time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const sender = msg.senderName && !isMine ? `<div class="chat-message-sender">${escapeHtml(msg.senderName)}</div>` : '';
+      return `
+        <div class="chat-message ${isMine ? 'mine' : ''}">
+          ${sender}
+          ${msg.text ? `<div class="chat-message-text">${escapeHtml(msg.text)}</div>` : ''}
+          <div class="chat-message-meta">${time}</div>
+        </div>
+      `;
+    }).join('');
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return;
+  }
+
+  if (!selectedFriendId) return;
+
+  let messages = [];
+  try {
+    if (typeof TasklyApi !== 'undefined') {
+      messages = await TasklyApi.getMessages(selectedFriendId);
+      saveConversationMessages(selectedFriendId, messages);
+    } else {
+      messages = loadConversationMessages(selectedFriendId);
+    }
+  } catch (_) {
+    messages = loadConversationMessages(selectedFriendId);
+  }
+
   if (!messages.length) {
     messagesEl.innerHTML = '<div class="chat-placeholder"><p>Пока нет сообщений.</p></div>';
     return;
   }
-  
+
   messagesEl.innerHTML = messages.map(msg => {
     const isMine = msg.from === currentUserData.id;
     const time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const files = (msg.attachments || []).map(a => renderAttachmentHtml(a)).join('');
     return `
       <div class="chat-message ${isMine ? 'mine' : ''}">
-        <div class="chat-message-text">${escapeHtml(msg.text)}</div>
+        ${msg.text ? `<div class="chat-message-text">${escapeHtml(msg.text)}</div>` : ''}
+        ${files ? `<div class="chat-attachments">${files}</div>` : ''}
         <div class="chat-message-meta">${time}</div>
       </div>
     `;
   }).join('');
-  
+
+  await hydrateAuthMedia(messagesEl);
+
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function handleSendRequest() {
-  const input = document.getElementById('friendEmailInput');
+async function handleSendRequest() {
+  const input = document.getElementById('friendQueryInput');
   if (!input) return;
-  const email = input.value.trim();
-  if (!email) {
-    showNotification?.('Введите email пользователя.', { type: 'warning' });
+  const query = input.value.trim();
+  if (!query) {
+    showNotification?.('Введите ник#тег или личный ID.', { type: 'warning' });
     return;
   }
-  const result = sendFriendRequest(email);
+  const result = await sendFriendRequest(query);
   if (result.success) {
     input.value = '';
     showNotification?.('Заявка отправлена!');
@@ -221,14 +454,33 @@ function handleSendRequest() {
   }
 }
 
-function handleSendMessage(event) {
+async function handleSendMessage(event) {
   event.preventDefault();
-  if (!selectedFriendId) return;
-  
+  if (!selectedFriendId && !selectedGroupId) return;
+
   const textarea = document.getElementById('chatMessageInput');
   const text = textarea.value.trim();
-  if (!text) return;
-  
+  if (!text && !chatDraftAttachments.length) return;
+
+  try {
+    if (typeof TasklyApi !== 'undefined') {
+      if (selectedGroupId) {
+        await TasklyApi.sendConversationMessage(selectedGroupId, { text, attachments: chatDraftAttachments });
+      } else {
+        await TasklyApi.sendMessage(selectedFriendId, text, chatDraftAttachments);
+      }
+      chatDraftAttachments = [];
+      textarea.value = '';
+      await renderChatMessages();
+      return;
+    }
+  } catch (e) {
+    showNotification?.(e.message, { type: 'warning' });
+    return;
+  }
+
+  if (!selectedFriendId) return;
+
   const messages = loadConversationMessages(selectedFriendId);
   messages.push({
     id: crypto.randomUUID(),
@@ -237,7 +489,6 @@ function handleSendMessage(event) {
     text,
     timestamp: Date.now()
   });
-  
   saveConversationMessages(selectedFriendId, messages);
   textarea.value = '';
   renderChatMessages();
@@ -249,35 +500,28 @@ function removeSelectedFriend() {
   removeFriend(selectedFriendId);
   selectedFriendId = null;
   loadFriendsData();
+  setMobilePanel('friends');
 }
 
 function loadConversationMessages(friendId) {
-  const chatId = getConversationKey(currentUserData.id, friendId);
-  const raw = localStorage.getItem(chatId);
+  const raw = localStorage.getItem(getConversationKey(currentUserData.id, friendId));
   if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    return [];
-  }
+  try { return JSON.parse(raw); } catch (_) { return []; }
 }
 
 function saveConversationMessages(friendId, messages) {
-  const chatId = getConversationKey(currentUserData.id, friendId);
-  localStorage.setItem(chatId, JSON.stringify(messages));
+  localStorage.setItem(getConversationKey(currentUserData.id, friendId), JSON.stringify(messages));
 }
 
 function getConversationKey(id1, id2) {
-  const sorted = [id1, id2].sort().join('_');
-  return `friendChat:${sorted}`;
+  return `friendChat:${[id1, id2].sort().join('_')}`;
 }
 
 function renderAvatarHTML(avatar) {
   if (avatar?.type === 'image' && avatar.value) {
     return `<span class="avatar-chip has-image" style="background-image:url('${avatar.value}')"></span>`;
   }
-  const emoji = avatar?.value || '👤';
-  return `<span class="avatar-chip">${emoji}</span>`;
+  return `<span class="avatar-chip avatar-fallback"><ion-icon name="person-outline"></ion-icon></span>`;
 }
 
 function escapeHtml(text) {
@@ -286,3 +530,12 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+Object.defineProperty(window, 'selectedFriendId', {
+  get() { return selectedFriendId; },
+  set(v) { selectedFriendId = v; }
+});
+
+Object.defineProperty(window, 'selectedGroupId', {
+  get() { return selectedGroupId; },
+  set(v) { selectedGroupId = v; }
+});

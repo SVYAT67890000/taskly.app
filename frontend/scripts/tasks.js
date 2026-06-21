@@ -1,6 +1,3 @@
-// Управление задачами
-
-// Глобальные переменные
 let tasks = [];
 let taskListEl;
 let emptyStateEl;
@@ -8,8 +5,11 @@ let tasksCountEl;
 let taskProjectFilterEl;
 let userLookup = [];
 let projectLookup = [];
+let draftTaskAttachments = [];
+let editTaskAttachmentsList = [];
+let taskListViewMode = 'active';
 
-// Инициализация при загрузке
+
 document.addEventListener('DOMContentLoaded', () => {
   taskListEl = document.getElementById('taskList');
   emptyStateEl = document.getElementById('emptyState');
@@ -19,36 +19,44 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTasks();
   setupFilters();
   setupEditModal();
+  setupTaskForm();
+  setupModalButtons();
+  setupTaskAttachments();
+  setupTaskViewTabs();
+  const modal = document.getElementById('addTaskModal');
+  if (modal) {
+    modal.addEventListener('show.bs.modal', () => setDefaultTaskDate());
+  }
 });
 
-// Загрузка задач из localStorage
+
 function loadTasks() {
   tasks = getTasksForCurrentUser();
   renderTasks();
 }
 
-// Сохранение задач в localStorage
+
 function saveTasks() {
-  // Используем функцию из auth.js для сохранения задач текущего пользователя
+  
   if (typeof saveUserTasks === 'function') {
     saveUserTasks(tasks);
   } else {
-    // Fallback для случая, если auth.js не загружен
+    
     localStorage.setItem('tasks', JSON.stringify(tasks));
   }
 }
 
-// Отображение задач
+
 function renderTasks() {
   if (!taskListEl || !emptyStateEl || !tasksCountEl) {
     updateProjectOverviewOnly();
     return;
   }
   
-  // Загружаем актуальные задачи текущего пользователя
+  
   tasks = getTasksForCurrentUser();
   
-  // Применяем фильтры
+  
   userLookup = typeof getUsers === 'function' ? getUsers() : [];
   projectLookup = typeof getAllProjects === 'function' ? getAllProjects() : [];
   const filteredTasks = getFilteredTasks();
@@ -57,14 +65,23 @@ function renderTasks() {
     renderProjectOverviewCard(currentProjectFilter);
   }
   
-  // Очищаем список
-  // Обновляем счетчик
+  
+  
   updateTasksCount(filteredTasks.length);
   
-  // Если задач нет, показываем пустое состояние
+  
   if (filteredTasks.length === 0) {
     taskListEl.innerHTML = '';
     emptyStateEl.classList.remove('d-none');
+    const emptyTitle = emptyStateEl.querySelector('.empty-title');
+    const emptyText = emptyStateEl.querySelector('.empty-text');
+    if (taskListViewMode === 'archive') {
+      if (emptyTitle) emptyTitle.textContent = 'Архив пуст';
+      if (emptyText) emptyText.textContent = 'Выполненные задачи будут появляться здесь.';
+    } else {
+      if (emptyTitle) emptyTitle.textContent = 'Пока нет задач';
+      if (emptyText) emptyText.textContent = 'Создайте свою первую задачу и начните планировать день!';
+    }
     return;
   }
   
@@ -114,32 +131,32 @@ function createTaskRow(task, { showProjectColumn, showAssigneesColumn }) {
   
   return `
     <tr data-task-id="${task.id}">
-      <td>
+      <td data-label="Тип">
         <span class="task-type-badge ${task.projectId ? 'type-project' : 'type-personal'}">
           ${task.projectId ? 'Проект' : 'Личная'}
         </span>
       </td>
-      <td>
+      <td data-label="Задача">
         <div class="task-title-cell">
           <button class="task-title-btn" onclick="editTask('${task.id}')">${escapeHtml(task.title)}</button>
           ${task.description ? `<div class="task-title-sub">${escapeHtml(task.description)}</div>` : ''}
         </div>
       </td>
-      ${showProjectColumn ? `<td>${projectDetails ? escapeHtml(projectDetails.name) : '—'}</td>` : ''}
+      ${showProjectColumn ? `<td data-label="Проект">${projectDetails ? escapeHtml(projectDetails.name) : '—'}</td>` : ''}
       ${showAssigneesColumn ? `
-        <td>
+        <td data-label="Исполнители">
           <div class="assignee-chips">
             ${assigneesMarkup}
           </div>
         </td>
       ` : ''}
-      <td>${formattedDate}</td>
-      <td>
+      <td data-label="Срок">${formattedDate}</td>
+      <td data-label="Приоритет">
         <span class="priority-pill priority-${task.priority}">
           ${getPriorityText(task.priority)}
         </span>
       </td>
-      <td>
+      <td data-label="Статус">
         <label class="checkbox-modern checkbox-inline">
           <input type="checkbox" class="checkbox-input" ${statusChecked} onchange="toggleTaskStatus('${task.id}')">
           <span class="checkbox-label">
@@ -148,17 +165,17 @@ function createTaskRow(task, { showProjectColumn, showAssigneesColumn }) {
           </span>
         </label>
       </td>
-      <td>
+      <td data-label="">
         <div class="task-table-actions">
-          <button class="task-card-btn" onclick="editTask('${task.id}')" title="Редактировать">✏️</button>
-          <button class="task-card-btn" onclick="deleteTask('${task.id}')" title="Удалить">🗑️</button>
+          <button class="task-card-btn" onclick="editTask('${task.id}')" title="Редактировать"><ion-icon name="create-outline"></ion-icon></button>
+          <button class="task-card-btn" onclick="deleteTask('${task.id}')" title="Удалить"><ion-icon name="trash-outline"></ion-icon></button>
         </div>
       </td>
     </tr>
   `;
 }
 
-// Получение текста приоритета
+
 function getPriorityText(priority) {
   const priorityMap = {
     low: 'Низкий',
@@ -168,9 +185,27 @@ function getPriorityText(priority) {
   return priorityMap[priority] || 'Средний';
 }
 
-// Применение фильтров
+
+function setupTaskViewTabs() {
+  document.querySelectorAll('[data-task-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      taskListViewMode = btn.dataset.taskView || 'active';
+      document.querySelectorAll('[data-task-view]').forEach(b => {
+        b.classList.toggle('active', b.dataset.taskView === taskListViewMode);
+      });
+      renderTasks();
+    });
+  });
+}
+
 function getFilteredTasks() {
   let filtered = [...tasks];
+
+  if (taskListViewMode === 'active') {
+    filtered = filtered.filter(task => task.status !== 'completed');
+  } else if (taskListViewMode === 'archive') {
+    filtered = filtered.filter(task => task.status === 'completed');
+  }
   
   const projectFilter = taskProjectFilterEl?.value || 'all';
   if (projectFilter === 'personal') {
@@ -179,19 +214,19 @@ function getFilteredTasks() {
     filtered = filtered.filter(task => task.projectId === projectFilter);
   }
   
-  // Фильтр по статусу
+  
   const statusFilter = document.getElementById('statusFilter')?.value || 'all';
   if (statusFilter !== 'all') {
     filtered = filtered.filter(task => task.status === statusFilter);
   }
   
-  // Фильтр по приоритету
+  
   const priorityFilter = document.getElementById('priorityFilter')?.value || 'all';
   if (priorityFilter !== 'all') {
     filtered = filtered.filter(task => task.priority === priorityFilter);
   }
   
-  // Сортировка
+  
   const sortFilter = document.getElementById('sortFilter')?.value || 'dateAsc';
   filtered.sort((a, b) => {
     switch (sortFilter) {
@@ -210,7 +245,7 @@ function getFilteredTasks() {
   return filtered;
 }
 
-// Обновление счетчика задач
+
 function updateTasksCount(count) {
   if (!tasksCountEl) return;
   
@@ -218,7 +253,7 @@ function updateTasksCount(count) {
   tasksCountEl.textContent = `${count} ${word}`;
 }
 
-// Правильное склонение слова "задача"
+
 function getTaskWord(count) {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -235,7 +270,7 @@ function getTaskWord(count) {
   return 'задач';
 }
 
-// Настройка фильтров
+
 function setupFilters() {
   const statusFilter = document.getElementById('statusFilter');
   const priorityFilter = document.getElementById('priorityFilter');
@@ -252,7 +287,7 @@ function setupFilters() {
   }
 }
 
-// Переключение статуса задачи
+
 function toggleTaskStatus(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (task) {
@@ -261,7 +296,7 @@ function toggleTaskStatus(taskId) {
     persistTask(task);
     renderTasks();
     
-    // Обновляем календарь, если мы на странице календаря
+    
     if (window.location.pathname.includes('calendar.html')) {
       if (typeof loadTasksForCalendar === 'function' && typeof renderCalendar === 'function') {
         loadTasksForCalendar();
@@ -275,12 +310,17 @@ function toggleTaskStatus(taskId) {
   }
 }
 
-// Редактирование задачи
+
+function findTaskById(taskId) {
+  return getTasksForCurrentUser().find(t => t.id === taskId)
+    || getStoredTasksSnapshot().find(t => t.id === taskId);
+}
+
 function editTask(taskId) {
-  const task = tasks.find(t => t.id === taskId);
+  const task = findTaskById(taskId);
   if (!task) return;
   
-  // Заполняем форму редактирования
+  
   document.getElementById('editTaskId').value = task.id;
   document.getElementById('editTitle').value = task.title;
   document.getElementById('editDescription').value = task.description || '';
@@ -300,8 +340,13 @@ function editTask(taskId) {
       option.selected = task.assignees.includes(option.value);
     });
   }
-  
-  // Открываем модальное окно редактирования
+  const shareEl = document.getElementById('editShareWithFriends');
+  if (shareEl) shareEl.checked = !!task.shareWithFriends;
+  editTaskAttachmentsList = [...(task.attachments || [])];
+  renderAttachmentsList(document.getElementById('editTaskAttachments'), editTaskAttachmentsList, i => {
+    editTaskAttachmentsList.splice(i, 1);
+    renderAttachmentsList(document.getElementById('editTaskAttachments'), editTaskAttachmentsList, null);
+  });
   const modalElement = document.getElementById('editTaskModal');
   if (modalElement && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
     const modal = new bootstrap.Modal(modalElement);
@@ -309,28 +354,32 @@ function editTask(taskId) {
   }
 }
 
-// Удаление задачи
+
 function deleteTask(taskId) {
+  const task = findTaskById(taskId);
+  if (typeof confirmDeleteTask === 'function') {
+    confirmDeleteTask(taskId, task?.title);
+    return;
+  }
   if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
+    deleteTaskById(taskId);
     tasks = tasks.filter(t => t.id !== taskId);
-    removeTask(taskId);
     renderTasks();
-    
-    // Обновляем календарь, если мы на странице календаря
-    if (window.location.pathname.includes('calendar.html')) {
-      if (typeof loadTasksForCalendar === 'function' && typeof renderCalendar === 'function') {
-        loadTasksForCalendar();
-        renderCalendar();
-      }
-    }
-    
-    if (typeof showNotification === 'function') {
-      showNotification('Задача удалена!');
+    refreshCalendarIfNeeded();
+    showNotification?.('Задача удалена!');
+  }
+}
+
+function refreshCalendarIfNeeded() {
+  if (window.location.pathname.includes('calendar.html')) {
+    if (typeof loadTasksForCalendar === 'function' && typeof renderCalendar === 'function') {
+      loadTasksForCalendar();
+      renderCalendar();
     }
   }
 }
 
-// Настройка модального окна редактирования
+
 function setupEditModal() {
   const editForm = document.getElementById('editTaskForm');
   if (editForm) {
@@ -342,7 +391,7 @@ function setupEditModal() {
       
       if (!task) return;
       
-      // Обновляем задачу
+      
       task.title = document.getElementById('editTitle').value.trim();
       task.description = document.getElementById('editDescription').value.trim();
       task.date = document.getElementById('editDate').value;
@@ -354,11 +403,13 @@ function setupEditModal() {
       const selectedAssignees = getSelectedValues(assigneesSelect);
       task.assignees = selectedAssignees.length > 0 ? selectedAssignees : [task.ownerId || task.userId];
       task.ownerId = task.ownerId || task.userId;
+      task.shareWithFriends = document.getElementById('editShareWithFriends')?.checked || false;
+      task.attachments = [...editTaskAttachmentsList];
       
       persistTask(task);
       renderTasks();
       
-      // Обновляем календарь, если мы на странице календаря
+      
       if (window.location.pathname.includes('calendar.html')) {
         if (typeof loadTasksForCalendar === 'function' && typeof renderCalendar === 'function') {
           loadTasksForCalendar();
@@ -366,7 +417,7 @@ function setupEditModal() {
         }
       }
       
-      // Закрываем модальное окно
+      
       const modalElement = document.getElementById('editTaskModal');
       if (modalElement && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
         const modal = bootstrap.Modal.getInstance(modalElement);
@@ -382,7 +433,7 @@ function setupEditModal() {
   }
 }
 
-// Экранирование HTML для безопасности
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -432,14 +483,13 @@ function getTasksForCurrentUser() {
   
   return allTasks.filter(task => {
     const ownerId = task.ownerId || task.userId;
-    const assignees = Array.isArray(task.assignees) ? task.assignees : [];
     
     if (task.projectId) {
       const project = projects.find(p => p.id === task.projectId);
       if (!project) return false;
-      const isMember = project.ownerId === currentUser.id || (project.memberIds || []).includes(currentUser.id);
-      const isAssigned = assignees.length === 0 || assignees.includes(currentUser.id);
-      return isMember && (isAssigned || project.ownerId === currentUser.id);
+      return typeof isProjectMember === 'function'
+        ? isProjectMember(project, currentUser.id)
+        : (project.ownerId === currentUser.id || (project.memberIds || []).includes(currentUser.id));
     }
     
     return ownerId === currentUser.id;
@@ -493,9 +543,132 @@ function getUserDisplayName(userId) {
   return user.username || user.email || 'Участник';
 }
 
-// Экспорт функций для использования в других скриптах
+function setupModalButtons() {
+  if (typeof bootstrap === 'undefined') return;
+  const modalElement = document.getElementById('addTaskModal');
+  if (!modalElement) return;
+
+  document.querySelectorAll('.btn-add-task[data-bs-toggle="modal"], .btn-empty-action[data-bs-toggle="modal"]')
+    .forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+      });
+    });
+}
+
+function setDefaultTaskDate() {
+  const taskDateEl = document.getElementById('taskDate');
+  if (taskDateEl && !taskDateEl.value) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    taskDateEl.value = tomorrow.toISOString().split('T')[0];
+  }
+}
+
+function getSelectedValuesFromSelect(selectEl) {
+  if (!selectEl) return [];
+  return Array.from(selectEl.selectedOptions || []).map(option => option.value);
+}
+
+function setupTaskForm() {
+  const taskForm = document.getElementById('taskForm');
+  if (!taskForm) return;
+
+  taskForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const title = document.getElementById('taskTitle').value.trim();
+    const description = document.getElementById('taskDescription').value.trim();
+    const date = document.getElementById('taskDate').value;
+    const priority = document.getElementById('taskPriority').value;
+    const projectId = document.getElementById('taskProject')?.value || '';
+    const assignees = getSelectedValuesFromSelect(document.getElementById('taskAssignees'));
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const ownerId = currentUser?.id || null;
+    const normalizedAssignees = assignees.length > 0 ? assignees : (ownerId ? [ownerId] : []);
+
+    if (!title) { alert('Пожалуйста, введите заголовок задачи'); return; }
+    if (!date) { alert('Пожалуйста, выберите дату выполнения'); return; }
+
+    const newTask = {
+      id: Date.now().toString(),
+      title,
+      description: description || '',
+      date,
+      priority,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      projectId: projectId || null,
+      assignees: normalizedAssignees,
+      ownerId,
+      userId: ownerId,
+      shareWithFriends: document.getElementById('taskShareWithFriends')?.checked || false,
+      attachments: [...draftTaskAttachments]
+    };
+
+    if (typeof upsertTask === 'function') {
+      upsertTask(newTask);
+    } else {
+      let list = typeof getUserTasks === 'function' ? getUserTasks() : JSON.parse(localStorage.getItem('tasks') || '[]');
+      list.push(newTask);
+      if (typeof saveUserTasks === 'function') saveUserTasks(list);
+      else localStorage.setItem('tasks', JSON.stringify(list));
+    }
+
+    taskForm.reset();
+    draftTaskAttachments = [];
+    renderAttachmentsList(document.getElementById('taskAttachments'), draftTaskAttachments, null);
+    setDefaultTaskDate();
+    const projectSelect = document.getElementById('taskProject');
+    if (projectSelect) projectSelect.value = '';
+    if (typeof updateAssigneeOptions === 'function') updateAssigneeOptions('taskAssignees', '');
+
+    const modalElement = document.getElementById('addTaskModal');
+    if (modalElement && typeof bootstrap !== 'undefined') {
+      bootstrap.Modal.getInstance(modalElement)?.hide();
+    }
+
+    showNotification?.('Задача создана!');
+    if (typeof renderTasks === 'function') renderTasks();
+
+    if (window.location.pathname.includes('calendar.html')) {
+      loadTasksForCalendar?.();
+      renderCalendar?.();
+      return;
+    }
+    setTimeout(() => window.location.reload(), 300);
+  });
+}
+
+
+function setupTaskAttachments() {
+  document.getElementById('taskAttachBtn')?.addEventListener('click', async () => {
+    const files = await pickFiles();
+    if (!files.length) return;
+    const uploaded = await uploadFiles(files);
+    draftTaskAttachments.push(...uploaded);
+    renderAttachmentsList(document.getElementById('taskAttachments'), draftTaskAttachments, i => {
+      draftTaskAttachments.splice(i, 1);
+      renderAttachmentsList(document.getElementById('taskAttachments'), draftTaskAttachments, null);
+    });
+  });
+  document.getElementById('editTaskAttachBtn')?.addEventListener('click', async () => {
+    const files = await pickFiles();
+    if (!files.length) return;
+    const uploaded = await uploadFiles(files);
+    editTaskAttachmentsList.push(...uploaded);
+    renderAttachmentsList(document.getElementById('editTaskAttachments'), editTaskAttachmentsList, i => {
+      editTaskAttachmentsList.splice(i, 1);
+      renderAttachmentsList(document.getElementById('editTaskAttachments'), editTaskAttachmentsList, null);
+    });
+  });
+}
+
+
 window.renderTasks = renderTasks;
 window.editTask = editTask;
 window.deleteTask = deleteTask;
+window.findTaskById = findTaskById;
 window.toggleTaskStatus = toggleTaskStatus;
 

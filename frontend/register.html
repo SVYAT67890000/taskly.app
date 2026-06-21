@@ -3,8 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Регистрация - Taskly</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="application-name" content="Таскли">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Таскли">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+    <title>Регистрация — Таскли</title>
     <link rel="stylesheet" href="styles/register.css">
+    <link rel="stylesheet" href="styles/design-light.css">
+    <link rel="stylesheet" href="styles/legal.css">
+    <link rel="stylesheet" href="styles/pwa.css">
+    <link rel="stylesheet" href="styles/mobile.css">
 </head>
 <body>
  <section>
@@ -23,25 +37,33 @@
                     <label for="registerEmail">Электронная почта</label>
                 </div>
                 <div class="inputbox">
-                    <ion-icon name="lock-closed-outline"></ion-icon>
                     <input type="password" id="registerPassword" autocomplete="off" required placeholder=" ">
                     <label for="registerPassword">Пароль</label>
                 </div>
                 <div class="inputbox">
-                    <ion-icon name="lock-closed-outline"></ion-icon>
                     <input type="password" id="confirmPassword" autocomplete="off" required placeholder=" ">
                     <label for="confirmPassword">Повторите пароль</label>
                 </div>
+                <p class="register-hint" style="font-size:0.85rem;color:#888;margin-bottom:1rem;">После регистрации вы получите тег вида <strong>имя#1234</strong> и личный ID.</p>
                 <button type="submit">Зарегистрироваться</button>
                 <div class="register" style="margin-top: 1.5rem;">
                     <p>Уже есть аккаунт? <a href="login.html">Войти</a></p>
                 </div>
+                <p class="auth-legal-footer">
+                    <a href="cookies.html" target="_blank" rel="noopener">Политика cookies</a>
+                </p>
             </form>
         </div>
     </div>
  </section>
  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+  <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+ <script src="scripts/consent.js"></script>
+ <script src="scripts/pwa.js"></script>
+ <script src="scripts/api.js"></script>
+ <script src="scripts/shared-ui.js"></script>
+ <script src="scripts/password-toggle.js"></script>
  <script src="scripts/auth.js"></script>
 </body>
 </html>

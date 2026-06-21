@@ -1,8 +1,7 @@
-/* Стили для страницы регистрации в стиле основного сайта */
+
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Переменные из основного стиля */
 :root {
   --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -57,6 +56,7 @@ body {
 section {
   width: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 2rem;
@@ -120,6 +120,43 @@ h1 {
   font-family: inherit;
 }
 
+.inputbox.has-password-toggle input {
+  padding-right: 3rem;
+}
+
+.inputbox .password-toggle-btn {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.inputbox .password-toggle-btn:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.08);
+  transform: translateY(-50%);
+}
+
+.inputbox .password-toggle-btn ion-icon {
+  position: static;
+  transform: none;
+  font-size: 1.2rem;
+  pointer-events: none;
+}
+
 .inputbox input:focus {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -148,7 +185,7 @@ h1 {
   background: var(--bg-card);
 }
 
-button {
+button[type="submit"] {
   width: 100%;
   height: 3.5rem;
   border-radius: var(--radius-sm);
@@ -164,16 +201,31 @@ button {
   margin-top: 1.5rem;
 }
 
-button:hover {
+button[type="submit"]:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-button:active {
+button[type="submit"]:active {
   transform: translateY(0);
 }
 
-/* Адаптивность */
+.auth-legal-footer {
+  text-align: center;
+  margin-top: 1rem;
+  margin-bottom: 0;
+  font-size: 0.85rem;
+}
+
+.auth-legal-footer a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.auth-legal-footer a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 576px) {
   .form-box {
     padding: 2rem 1.5rem;

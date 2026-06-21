@@ -3,8 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="application-name" content="Таскли">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Таскли">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
   <link rel="stylesheet" href="styles/login.css">
-  <title>Вход в аккаунт - Taskly</title>
+  <link rel="stylesheet" href="styles/design-light.css">
+  <link rel="stylesheet" href="styles/legal.css">
+  <link rel="stylesheet" href="styles/pwa.css">
+  <link rel="stylesheet" href="styles/mobile.css">
+  <title>Вход — Таскли</title>
 </head>
 <body>
     <section>
@@ -18,29 +31,68 @@
                         <label for="loginEmail">Электронная почта</label>
                     </div>
                     <div class="inputbox">
-                        <ion-icon name="lock-closed-outline"></ion-icon>
                         <input type="password" id="loginPassword" required placeholder=" ">
                         <label for="loginPassword">Пароль</label>
                     </div>
-                    <!-- <div class="forget">
-                        <label>
-                            <input type="checkbox" id="rememberMe">
-                            Запомнить меня
-                        </label>
-                        <span id="forgotten">
-                            <a href="#">Забыли пароль?</a>
-                        </span>
-                    </div> -->
+                    <div class="forget">
+                        <label><a href="#" id="forgotPasswordLink">Забыли пароль?</a></label>
+                    </div>
                     <button type="submit">Вход</button>
                     <div class="register">
                         <p>Нет аккаунта? <a href="register.html">Регистрация</a></p>
                     </div>
+                    <p class="auth-legal-footer">
+                        <a href="cookies.html" target="_blank" rel="noopener">Политика cookies</a>
+                    </p>
                 </form>
             </div>
         </div>
     </section>
-    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-    <script src="scripts/auth.js"></script>
+
+    <div id="forgotPasswordModal" class="app-modal app-modal-hidden" role="dialog" aria-modal="true">
+      <div class="app-modal-backdrop" data-close-forgot></div>
+      <div class="app-modal-dialog app-modal-dialog-wide">
+        <div class="app-modal-header">
+          <h5>Восстановление пароля</h5>
+        </div>
+        <p class="app-modal-text">Код придёт на email. Без SMTP код выводится в консоль сервера.</p>
+        <div class="forgot-form-grid">
+          <div class="inputbox">
+            <ion-icon name="mail-outline"></ion-icon>
+            <input type="email" id="resetEmail" placeholder=" " required>
+            <label for="resetEmail">Email</label>
+          </div>
+          <div class="forgot-code-row">
+            <div class="inputbox">
+              <ion-icon name="key-outline"></ion-icon>
+              <input type="text" id="resetCode" placeholder=" " maxlength="6">
+              <label for="resetCode">Код из письма</label>
+            </div>
+            <button type="button" class="btn-secondary-inline" id="sendResetCodeBtn">Получить код</button>
+          </div>
+          <div class="inputbox">
+            <input type="password" id="resetNewPassword" placeholder=" " minlength="6">
+            <label for="resetNewPassword">Новый пароль</label>
+          </div>
+          <div class="inputbox">
+            <input type="password" id="resetConfirmPassword" placeholder=" " minlength="6">
+            <label for="resetConfirmPassword">Повторите пароль</label>
+          </div>
+        </div>
+        <div class="app-modal-actions">
+          <button type="button" class="btn-cancel" id="forgotPasswordCancel">Отмена</button>
+          <button type="button" class="btn-primary" id="submitResetBtn">Сохранить пароль</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+  <script src="scripts/consent.js"></script>
+    <script src="scripts/pwa.js"></script>
+  <script src="scripts/api.js"></script>
+  <script src="scripts/notifications.js"></script>
+  <script src="scripts/shared-ui.js"></script>
+  <script src="scripts/password-toggle.js"></script>
+  <script src="scripts/auth.js"></script>
 </body>
 </html>

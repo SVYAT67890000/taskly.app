@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="application-name" content="Таскли">
+  <meta name="apple-mobile-web-app-title" content="Таскли">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+  <title>Mind Map — Таскли</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/design-light.css">
+  <link rel="stylesheet" href="styles/pwa.css">
+  <link rel="stylesheet" href="styles/mobile.css">
+  <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+</head>
+<body class="mindmap-body">
+  <header class="miro-topbar">
+    <div class="miro-topbar-left">
+      <a href="index.html" class="miro-back miro-brand-link">
+        <img src="assets/logo.svg" alt="" class="brand-logo" width="24" height="24">
+        <span>Таскли</span>
+      </a>
+      <select class="filter-select miro-project-select" id="mindmapProjectSelect"></select>
+    </div>
+    <div class="miro-topbar-center">
+      <span class="miro-title">Доска проекта</span>
+      <span class="mindmap-sync-status" id="mindmapSyncStatus">—</span>
+    </div>
+    <div class="miro-topbar-right">
+      <button type="button" class="miro-zoom-btn" id="zoomOutBtn" title="Уменьшить">−</button>
+      <span class="miro-zoom-label" id="zoomLabel">100%</span>
+      <button type="button" class="miro-zoom-btn" id="zoomInBtn" title="Увеличить">+</button>
+      <button type="button" class="btn-secondary btn-sm" id="fitViewBtn">По размеру</button>
+      <button type="button" class="btn-primary btn-sm" id="saveMindmapBtn">Сохранить</button>
+    </div>
+  </header>
+
+  <div class="miro-workspace">
+    <aside class="miro-toolbar" id="miroToolbar">
+      <button type="button" class="miro-tool active" data-tool="select" title="Выбор (V)"><ion-icon name="navigate-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" data-tool="hand" title="Рука / панорама (H)"><ion-icon name="hand-left-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" data-tool="note" title="Стикер (N)"><ion-icon name="document-text-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" data-tool="connect" title="Связь (C)"><ion-icon name="git-network-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" data-tool="erase" title="Удалить (E)"><ion-icon name="trash-outline"></ion-icon></button>
+      <div class="miro-toolbar-divider"></div>
+      <button type="button" class="miro-tool" id="undoMindmapBtn" title="Отменить (Ctrl+Z)"><ion-icon name="arrow-undo-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" id="redoMindmapBtn" title="Повторить (Ctrl+Y)"><ion-icon name="arrow-redo-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" id="duplicateNodeBtn" title="Дублировать (Ctrl+D)"><ion-icon name="copy-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" id="snapGridBtn" title="Привязка к сетке"><ion-icon name="grid-outline"></ion-icon></button>
+      <button type="button" class="miro-tool" id="mindmapHelpBtn" title="Справка (?)"><ion-icon name="help-circle-outline"></ion-icon></button>
+      <div class="miro-toolbar-divider"></div>
+      <button type="button" class="miro-tool" id="addMindmapNode" title="Быстрый стикер"><ion-icon name="add-outline"></ion-icon></button>
+    </aside>
+
+    <div class="miro-canvas" id="mindmapViewport">
+      <div class="miro-world" id="mindmapWorld">
+        <svg id="mindmapSvg" class="miro-edges" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="mindmapNodes" class="miro-notes"></div>
+      </div>
+      <div class="miro-hint" id="mindmapHint">Колёсико — масштаб · Пробел+перетаскивание — панорама · Двойной клик — новый стикер</div>
+    </div>
+
+    <aside class="miro-panel" id="miroPanel">
+      <h3>Свойства</h3>
+      <p class="miro-panel-empty" id="panelEmpty">Выберите стикер на доске</p>
+      <div class="miro-panel-content d-none" id="panelContent">
+        <label class="miro-panel-label">Текст</label>
+        <textarea class="form-input-modern" id="panelText" rows="3"></textarea>
+        <label class="miro-panel-label">Цвет</label>
+        <div class="miro-colors" id="panelColors">
+          <button type="button" data-color="#fef08a" style="background:#fef08a" title="Жёлтый"></button>
+          <button type="button" data-color="#bbf7d0" style="background:#bbf7d0" title="Зелёный"></button>
+          <button type="button" data-color="#bfdbfe" style="background:#bfdbfe" title="Синий"></button>
+          <button type="button" data-color="#fbcfe8" style="background:#fbcfe8" title="Розовый"></button>
+          <button type="button" data-color="#e9d5ff" style="background:#e9d5ff" title="Фиолетовый"></button>
+          <button type="button" data-color="#fed7aa" style="background:#fed7aa" title="Оранжевый"></button>
+        </div>
+        <button type="button" class="btn-secondary btn-sm miro-delete-btn" id="deleteNodeBtn">Удалить стикер</button>
+        <button type="button" class="btn-secondary btn-sm" id="duplicateNodeBtnPanel">Дублировать</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="miro-help-overlay d-none" id="mindmapHelpModal">
+    <div class="miro-help-card">
+      <h3>Горячие клавиши</h3>
+      <ul class="miro-help-list">
+        <li><kbd>V</kbd> — выбор</li>
+        <li><kbd>H</kbd> — панорама</li>
+        <li><kbd>N</kbd> — новый стикер</li>
+        <li><kbd>C</kbd> — связь между стикерами</li>
+        <li><kbd>E</kbd> — удаление</li>
+        <li><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> — отмена / повтор</li>
+        <li><kbd>Ctrl+D</kbd> — дублировать стикер</li>
+        <li><kbd>?</kbd> — эта справка</li>
+        <li>Пробел + перетаскивание — панорама</li>
+        <li>Колёсико — масштаб</li>
+      </ul>
+      <button type="button" class="btn-primary btn-sm" id="closeMindmapHelp">Понятно</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="scripts/consent.js"></script>
+  <script src="scripts/pwa.js"></script>
+  <script src="scripts/theme.js"></script>
+  <script src="scripts/notifications.js"></script>
+  <script src="scripts/api.js"></script>
+  <script src="scripts/shared-ui.js"></script>
+  <script src="scripts/auth.js"></script>
+  <script src="scripts/mindmap.js"></script>
+</body>
+</html>

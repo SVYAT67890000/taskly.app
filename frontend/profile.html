@@ -3,13 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Профиль — Taskly</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="application-name" content="Таскли">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Таскли">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+  <title>Профиль — Таскли</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/design-light.css">
+  <link rel="stylesheet" href="styles/legal.css">
+  <link rel="stylesheet" href="styles/pwa.css">
+  <link rel="stylesheet" href="styles/mobile.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+  <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
 </head>
 <body>
 
@@ -17,11 +31,12 @@
     <div class="container">
       <div class="navbar-content">
         <a class="navbar-brand-modern" href="index.html">
-          <span class="brand-text">Taskly</span>
+          <img src="assets/logo.svg" alt="" class="brand-logo" width="28" height="28">
+          <span class="brand-text">Таскли</span>
         </a>
         <div class="navbar-right">
-          <button class="theme-toggle-btn-header" id="themeToggle" title="Переключить тему">
-            <span class="theme-icon-header">🌙</span>
+          <button class="theme-toggle-btn-header btn-icon-only" id="themeToggle" title="Переключить тему">
+            <span class="theme-icon-header"><ion-icon name="moon-outline"></ion-icon></span>
           </button>
           <div class="user-menu-container">
             <button class="user-menu-btn" id="userMenuBtn" type="button" title="Меню пользователя">
@@ -39,36 +54,13 @@
               </div>
               <div class="user-menu-divider"></div>
               <ul class="user-menu-list">
-                <li class="user-menu-item">
-                  <a href="profile.html" class="user-menu-link active">
-                    <span class="menu-item-icon"></span>
-                    <span>Профиль</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="friends.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Друзья</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="index.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Мои задачи</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="calendar.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Календарь</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="#" class="user-menu-link" id="menuLogoutBtn">
-                    <span class="menu-item-icon"></span>
-                    <span>Выйти из аккаунта</span>
-                  </a>
-                </li>
+                <li class="user-menu-item"><a href="profile.html" class="user-menu-link active"><span class="menu-link-text">Профиль</span></a></li>
+                <li class="user-menu-item"><a href="friends.html" class="user-menu-link"><span class="menu-link-text">Друзья</span></a></li>
+                <li class="user-menu-item"><a href="index.html" class="user-menu-link"><span class="menu-link-text">Мои задачи</span></a></li>
+                <li class="user-menu-item"><a href="calendar.html" class="user-menu-link"><span class="menu-link-text">Календарь</span></a></li>
+                <li class="user-menu-item"><a href="stats.html" class="user-menu-link"><span class="menu-link-text">Статистика</span></a></li>
+                <li class="user-menu-item"><a href="support.html" class="user-menu-link"><span class="menu-link-text">Поддержка</span></a></li>
+                <li class="user-menu-item"><a href="#" class="user-menu-link" id="menuLogoutBtn"><span class="menu-link-text">Выйти</span></a></li>
               </ul>
             </div>
           </div>
@@ -82,13 +74,42 @@
       <div class="profile-header">
         <div>
           <h1>Профиль</h1>
-          <p>Управляйте аккаунтом, аватаром и безопасностью.</p>
+          <p>Управляйте аккаунтом.</p>
         </div>
         <div class="profile-badge">
           <span class="profile-status-dot"></span>
           <span id="profileStatusText">В сети</span>
         </div>
       </div>
+
+      <div class="page-tabs" data-page-tabs>
+        <button type="button" class="page-tab active" data-page-tab="account">Аккаунт</button>
+        <button type="button" class="page-tab" data-page-tab="achievements">Достижения</button>
+        <button type="button" class="page-tab" data-page-tab="security">Безопасность</button>
+        <button type="button" class="page-tab" data-page-tab="legal">Документы</button>
+      </div>
+
+      <div class="page-panel active" data-page-panel="account">
+      <section class="profile-card profile-id-card">
+        <div class="profile-card-header">
+          <div>
+            <h2>Ваш ID</h2>
+            <p>Друзья могут добавить вас по тегу или личному ID</p>
+          </div>
+        </div>
+        <div class="profile-id-row">
+          <div class="profile-id-item">
+            <span class="profile-id-label">Тег</span>
+            <code id="profileTag" class="profile-id-value">—</code>
+            <button type="button" class="btn-secondary btn-sm" data-copy="profileTag">Копировать</button>
+          </div>
+          <div class="profile-id-item">
+            <span class="profile-id-label">Личный ID</span>
+            <code id="profilePublicId" class="profile-id-value">—</code>
+            <button type="button" class="btn-secondary btn-sm" data-copy="profilePublicId">Копировать</button>
+          </div>
+        </div>
+      </section>
 
       <div class="profile-grid">
         <section class="profile-card">
@@ -148,12 +169,27 @@
             </div>
           </form>
         </section>
+      </div>
+      </div>
 
+      <div class="page-panel" data-page-panel="achievements">
+        <section class="profile-card profile-achievements-card">
+          <div class="profile-card-header">
+            <div>
+              <h2>Достижения</h2>
+              <p>За задачи, проекты, друзей и общение</p>
+            </div>
+          </div>
+          <div id="achievementsGrid" class="achievements-grid"></div>
+        </section>
+      </div>
+
+      <div class="page-panel" data-page-panel="security">
         <section class="profile-card">
           <div class="profile-card-header">
             <div>
               <h2>Смена пароля</h2>
-              <p>Мы отправим код подтверждения на ваш email.</p>
+              <p>Нажмите «Получить код» — письмо придёт на email аккаунта.(Пока код выводится в консоль сервера без SMTP)</p>
             </div>
           </div>
           <form id="passwordForm" class="profile-form">
@@ -178,6 +214,43 @@
               <button type="submit" class="btn-primary">Обновить пароль</button>
             </div>
           </form>
+        </section>
+
+        <section class="profile-card profile-danger-zone">
+          <div class="profile-card-header">
+            <div>
+              <h2>Удаление аккаунта</h2>
+              <p>Безвозвратно удалит профиль, задачи, проекты, заметки и друзей. Введите email и пароль для подтверждения.</p>
+            </div>
+          </div>
+          <form id="deleteAccountForm" class="profile-form">
+            <div class="form-group-modern">
+              <label class="form-label-modern" for="deleteAccountEmail">Email аккаунта</label>
+              <input type="email" class="form-input-modern" id="deleteAccountEmail" required autocomplete="email">
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern" for="deleteAccountPassword">Пароль</label>
+              <input type="password" class="form-input-modern" id="deleteAccountPassword" required autocomplete="current-password">
+            </div>
+            <div class="profile-form-actions">
+              <button type="submit" class="btn-danger-solid">Удалить аккаунт</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <div class="page-panel" data-page-panel="legal">
+        <section class="profile-card profile-legal-card">
+          <div class="profile-card-header">
+            <div>
+              <h2>Правовая информация</h2>
+              <p>Документы по обработке данных</p>
+            </div>
+          </div>
+          <div class="profile-legal-links">
+            <a href="privacy.html" target="_blank" rel="noopener">Согласие на обработку персональных данных</a>
+            <a href="cookies.html" target="_blank" rel="noopener">Политика cookies</a>
+          </div>
         </section>
       </div>
     </div>
@@ -212,6 +285,28 @@
     </div>
   </div>
 
+  <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern">
+      <div class="modal-content-modern">
+        <div class="modal-header-modern">
+          <div class="modal-header-content">
+            <h5 class="modal-title-modern">Удалить аккаунт?</h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body-modern">
+          <p>Это действие необратимо. Все ваши данные будут удалены без возможности восстановления.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn-submit btn-danger-solid" id="confirmDeleteAccountBtn">Удалить навсегда</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern">
       <div class="modal-content-modern">
@@ -241,9 +336,20 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+  <script src="scripts/consent.js"></script>
+  <script src="scripts/pwa.js"></script>
   <script src="scripts/theme.js"></script>
   <script src="scripts/notifications.js"></script>
+  <script src="scripts/api.js"></script>
+  <script src="scripts/shared-ui.js"></script>
+  <script src="scripts/password-toggle.js"></script>
   <script src="scripts/auth.js"></script>
+  <script src="scripts/notification-settings.js"></script>
+  <script src="scripts/unread-messages.js"></script>
+  <script src="scripts/message-notifications.js"></script>
+  <script src="scripts/notification-center.js"></script>
+  <script src="scripts/achievement-icons.js"></script>
+  <script src="scripts/page-tabs.js"></script>
   <script src="scripts/profile.js"></script>
 </body>
 </html>

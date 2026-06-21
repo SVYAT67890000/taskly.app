@@ -3,26 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Taskly — Органайзер задач и заметок</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="application-name" content="Таскли">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Таскли">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+  <title>Таскли — Органайзер задач и заметок</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/design-light.css">
+  <link rel="stylesheet" href="styles/pwa.css">
+  <link rel="stylesheet" href="styles/mobile.css">
+  <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
-  <!-- Навигация -->
   <nav class="navbar-modern">
     <div class="container">
-      <div class="navbar-content">
-        <a class="navbar-brand-modern" href="#">
-          <span class="brand-icon"></span>
-          <span class="brand-text">Taskly</span>
+        <div class="navbar-content">
+        <a class="navbar-brand-modern" href="index.html">
+          <img src="assets/logo.svg" alt="" class="brand-logo" width="28" height="28">
+          <span class="brand-text">Таскли</span>
         </a>
         <div class="navbar-right">
-          <button class="theme-toggle-btn-header" id="themeToggle" title="Переключить тему">
-            <span class="theme-icon-header">🌙</span>
+          <button class="theme-toggle-btn-header btn-icon-only" id="themeToggle" title="Переключить тему">
+            <span class="theme-icon-header"><ion-icon name="moon-outline"></ion-icon></span>
           </button>
           <div class="user-menu-container">
             <button class="user-menu-btn" id="userMenuBtn" type="button" title="Меню пользователя">
@@ -42,32 +55,38 @@
               <ul class="user-menu-list">
                 <li class="user-menu-item">
                   <a href="profile.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Профиль</span>
+                    <span class="menu-link-text">Профиль</span>
                   </a>
                 </li>
                 <li class="user-menu-item">
                   <a href="friends.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Друзья</span>
+                    <span class="menu-link-text">Друзья</span>
+                    <span class="nav-unread-badge d-none" id="navFriendsUnread">0</span>
                   </a>
                 </li>
                 <li class="user-menu-item">
                   <a href="index.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Мои задачи</span>
+                    <span class="menu-link-text">Мои задачи</span>
                   </a>
                 </li>
                 <li class="user-menu-item">
                   <a href="calendar.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Календарь</span>
+                    <span class="menu-link-text">Календарь</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="stats.html" class="user-menu-link">
+                    <span class="menu-link-text">Статистика</span>
+                  </a>
+                </li>
+                <li class="user-menu-item">
+                  <a href="support.html" class="user-menu-link">
+                    <span class="menu-link-text">Поддержка</span>
                   </a>
                 </li>
                 <li class="user-menu-item">
                   <a href="#" class="user-menu-link" id="menuLogoutBtn">
-                    <span class="menu-item-icon"></span>
-                    <span>Выйти из аккаунта</span>
+                    <span class="menu-link-text">Выйти</span>
                   </a>
                 </li>
               </ul>
@@ -78,22 +97,26 @@
     </div>
   </nav>
 
-  <!-- Основной контент -->
+  
   <div class="main-container">
     <div class="container-fluid">
       <div class="row g-4">
-        <!-- Левая колонка: кнопки и фильтры -->
+        
         <div class="col-lg-3 col-md-4 col-12">
           <div class="sidebar-modern">
-            <div class="sidebar-header">
-              <h2 class="sidebar-title">Панель управления</h2>
-            </div>
-            
             <button class="btn-add-task" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-              <span class="btn-icon">+</span>
+              <ion-icon name="add-outline"></ion-icon>
               <span>Создать задачу</span>
             </button>
 
+            <div class="sidebar-tabs">
+              <button type="button" class="sidebar-tab active" data-sidebar-tab="projects">Проекты</button>
+              <button type="button" class="sidebar-tab" data-sidebar-tab="filters">Фильтры</button>
+              <button type="button" class="sidebar-tab" data-sidebar-tab="notify">Уведомления</button>
+              <span class="sidebar-tab-indicator" aria-hidden="true"></span>
+            </div>
+
+            <div class="sidebar-panel active" data-sidebar-panel="projects">
             <div class="projects-section">
               <div class="projects-header">
                 <h2 class="sidebar-title">Проекты</h2>
@@ -122,20 +145,18 @@
                 </div>
               </div>
             </div>
+            </div>
 
+            <div class="sidebar-panel" data-sidebar-panel="filters">
             <div class="filters-section">
-              <h3 class="section-title">
-                Фильтры
-              </h3>
+              <h3 class="section-title">Фильтры</h3>
               
               <div class="filter-group">
                 <label class="filter-label">Статус</label>
                 <select class="filter-select" id="statusFilter">
-                  <div class="filter-select-dropdown" id="filterSelectDropdown"></div>
                     <option value="all">Все задачи</option>
                     <option value="pending">Активные</option>
                     <option value="completed">Выполненные</option>
-                  </div>
                 </select>
               </div>
 
@@ -158,14 +179,14 @@
                 </select>
               </div>
             </div>
+            </div>
 
+            <div class="sidebar-panel" data-sidebar-panel="notify">
             <div class="reminder-widget" id="reminderWidget">
               <div class="reminder-header">
                 <div>
-                  <h3 class="section-title">
-                    Напоминания
-                  </h3>
-                  <p class="reminder-subtitle">Получайте уведомления о ближайших задачах.</p>
+                  <h3 class="section-title">Напоминания</h3>
+                  <p class="reminder-subtitle">Уведомления о ближайших задачах</p>
                 </div>
                 <label class="reminder-switch">
                   <input type="checkbox" id="reminderToggle" class="reminder-switch-input">
@@ -181,7 +202,35 @@
                   <option value="7">За неделю</option>
                 </select>
                 <div class="reminder-status" id="reminderStatus">Напоминания отключены</div>
+                <div class="reminder-push-row">
+                  <label class="reminder-switch reminder-switch-compact">
+                    <input type="checkbox" id="pushToggle" class="reminder-switch-input">
+                    <span class="reminder-switch-slider"></span>
+                  </label>
+                  <span class="reminder-push-label">Push-уведомления</span>
+                </div>
+                <div class="reminder-push-status" id="pushStatus">—</div>
+                <div class="notif-prefs-block">
+                  <p class="notif-prefs-title">Настройки уведомлений</p>
+                  <label class="notif-pref-row">
+                    <input type="checkbox" id="notifMessages" checked>
+                    <span>Сообщения от друзей</span>
+                  </label>
+                  <label class="notif-pref-row">
+                    <input type="checkbox" id="notifFriendRequests" checked>
+                    <span>Заявки в друзья</span>
+                  </label>
+                  <label class="notif-pref-row">
+                    <input type="checkbox" id="notifReminders" checked>
+                    <span>Напоминания о задачах</span>
+                  </label>
+                  <label class="notif-pref-row">
+                    <input type="checkbox" id="notifSound" checked>
+                    <span>Звук уведомлений</span>
+                  </label>
+                </div>
               </div>
+            </div>
             </div>
 
             <div class="offline-alert-modern d-none" id="offlineAlert">
@@ -193,18 +242,24 @@
           </div>
         </div>
 
-        <!-- Правая колонка: список задач и календарь -->
+        
         <div class="col-lg-9 col-md-8 col-12">
-          <!-- Панель задач -->
-          <div class="tasks-section">
+          <div class="main-content-tabs">
+            <button type="button" class="content-tab active" data-main-tab="tasks">Задачи</button>
+            <button type="button" class="content-tab" data-main-tab="notes">Заметки</button>
+          </div>
+
+          <div class="tasks-section content-panel-main active" data-main-panel="tasks">
             <div class="tasks-header">
               <h2 class="tasks-title">Мои задачи</h2>
+              <div class="tasks-view-tabs">
+                <button type="button" class="tasks-view-tab active" data-task-view="active">Активные</button>
+                <button type="button" class="tasks-view-tab" data-task-view="archive">Архив</button>
+              </div>
               <div class="tasks-count" id="tasksCount">0 задач</div>
             </div>
             
-            <div id="taskList" class="tasks-table-container">
-              <!-- Задачи будут подгружаться через JS -->
-            </div>
+            <div id="taskList" class="tasks-table-container"></div>
 
             <div class="empty-state d-none" id="emptyState">
               <h3 class="empty-title">Пока нет задач</h3>
@@ -214,12 +269,32 @@
               </button>
             </div>
           </div>
+
+          <div class="notes-section content-panel-main" data-main-panel="notes">
+            <div class="notes-toolbar">
+              <div class="gkeep-composer gkeep-composer-inline">
+                <input type="text" id="composerTitle" class="gkeep-composer-title" placeholder="Заголовок заметки">
+                <textarea id="composerContent" class="gkeep-composer-content" rows="2" placeholder="Текст заметки..."></textarea>
+                <div class="gkeep-composer-actions">
+                  <button type="button" class="btn-secondary btn-sm" id="attachNoteBtn"><ion-icon name="attach-outline"></ion-icon> Файл</button>
+                  <button type="button" class="btn-primary btn-sm" id="addNoteBtn">Создать заметку</button>
+                </div>
+                <div id="noteComposerAttachments" class="attachments-list d-none"></div>
+              </div>
+              <div class="notes-search-wrap">
+                <ion-icon name="search-outline"></ion-icon>
+                <input type="search" id="notesSearch" class="gkeep-search" placeholder="Поиск заметок...">
+              </div>
+            </div>
+            <div id="notesEmpty" class="gkeep-empty d-none"><p>Заметок пока нет.</p></div>
+            <div id="notesGrid" class="gkeep-grid"></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Модальное окно добавления задачи -->
+  
   <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern modal-large">
       <div class="modal-content-modern">
@@ -262,12 +337,20 @@
               <div class="form-group-modern">
                 <label class="form-label-modern">Приоритет</label>
                 <select class="form-input-modern" id="taskPriority" required>
-                  <option value="low">🟢 Низкий</option>
-                  <option value="medium" selected>🟡 Средний</option>
-                  <option value="high">🔴 Высокий</option>
+                  <option value="low">Низкий</option>
+                  <option value="medium" selected>Средний</option>
+                  <option value="high">Высокий</option>
                 </select>
               </div>
             </div>
+            <div class="task-extra-actions">
+              <label class="checkbox-modern share-friends-row">
+                <input type="checkbox" id="taskShareWithFriends" class="checkbox-input">
+                <span class="checkbox-label"><span class="checkbox-icon"></span> Показывать друзьям</span>
+              </label>
+              <button type="button" class="btn-secondary btn-sm" id="taskAttachBtn"><ion-icon name="attach-outline"></ion-icon> Прикрепить файлы</button>
+            </div>
+            <div id="taskAttachments" class="attachments-list d-none"></div>
             <div class="modal-actions">
               <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
               <button type="submit" class="btn-submit">
@@ -281,7 +364,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно проекта -->
+  
   <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern">
       <div class="modal-content-modern">
@@ -308,7 +391,7 @@
             <div class="form-group-modern">
               <label class="form-label-modern">Участники</label>
               <select class="form-input-modern multiselect" id="projectMembers" multiple></select>
-              <p class="form-hint">Добавьте исполнителей. Вы автоматически станете руководителем проекта.</p>
+              <p class="form-hint">Только друзья. Вы автоматически станете руководителем проекта.</p>
             </div>
             <div class="modal-actions">
               <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
@@ -323,7 +406,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно редактирования -->
+  
   <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern">
       <div class="modal-content-modern">
@@ -367,11 +450,19 @@
               <div class="form-group-modern">
                 <label class="form-label-modern">Приоритет</label>
                 <select class="form-input-modern" id="editPriority" required>
-                  <option value="low">🟢 Низкий</option>
-                  <option value="medium">🟡 Средний</option>
-                  <option value="high">🔴 Высокий</option>
+                  <option value="low">Низкий</option>
+                  <option value="medium">Средний</option>
+                  <option value="high">Высокий</option>
                 </select>
               </div>
+            </div>
+            <label class="checkbox-modern share-friends-row">
+              <input type="checkbox" id="editShareWithFriends" class="checkbox-input">
+              <span class="checkbox-label"><span class="checkbox-icon"></span> Показывать друзьям</span>
+            </label>
+            <div class="form-group-modern">
+              <button type="button" class="btn-secondary btn-sm" id="editTaskAttachBtn"><ion-icon name="attach-outline"></ion-icon> Прикрепить файлы</button>
+              <div id="editTaskAttachments" class="attachments-list d-none"></div>
             </div>
             <div class="form-group-modern">
               <label class="checkbox-modern">
@@ -423,12 +514,24 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="scripts/consent.js"></script>
+  <script src="scripts/pwa.js"></script>
   <script src="scripts/theme.js"></script>
   <script src="scripts/notifications.js"></script>
+  <script src="scripts/api.js"></script>
+  <script src="scripts/shared-ui.js"></script>
   <script src="scripts/auth.js"></script>
   <script src="scripts/projects.js"></script>
-  <script src="scripts/notes.js"></script>
+  <script src="scripts/attachments.js"></script>
   <script src="scripts/tasks.js"></script>
+  <script src="scripts/notes.js"></script>
+  <script src="scripts/dashboard-tabs.js"></script>
+  <script src="scripts/main-tabs.js"></script>
+  <script src="scripts/notification-settings.js"></script>
+  <script src="scripts/unread-messages.js"></script>
+  <script src="scripts/notification-center.js"></script>
+  <script src="scripts/push-notifications.js"></script>
+  <script src="scripts/message-notifications.js"></script>
   <script src="scripts/reminders.js"></script>
   <script src="scripts/sync.js"></script>
 </body>

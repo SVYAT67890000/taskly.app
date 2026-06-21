@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <title>Политика cookies — Таскли</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/legal.css">
+</head>
+<body class="legal-page">
+  <div class="legal-container">
+    <a href="index.html" class="legal-back">← На главную</a>
+    <h1>Политика использования cookies</h1>
+    <p class="legal-updated">Дата публикации: 25 мая 2026</p>
+
+    <section>
+      <h2>1. Что такое cookies</h2>
+      <p>Cookies — небольшие файлы, которые сайт сохраняет в браузере. Таскли также использует <strong>localStorage</strong> для хранения настроек и сессии.</p>
+    </section>
+
+    <section>
+      <h2>2. Какие cookies мы используем</h2>
+      <table class="legal-table">
+        <thead>
+          <tr><th>Название / ключ</th><th>Тип</th><th>Назначение</th><th>Срок</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>userToken</td><td>Необходимый</td><td>Авторизация в сервисе</td><td>До выхода / 30 дней</td></tr>
+          <tr><td>currentUser</td><td>Необходимый</td><td>Данные профиля в сессии</td><td>До выхода</td></tr>
+          <tr><td>taskly-theme</td><td>Функциональный</td><td>Тема оформления (светлая/тёмная)</td><td>Бессрочно</td></tr>
+          <tr><td>taskly.consent.*</td><td>Необходимый</td><td>Запоминание вашего выбора по cookies</td><td>Бессрочно</td></tr>
+          <tr><td>tasks, projects</td><td>Функциональный</td><td>Кэш данных для быстрой работы</td><td>До синхронизации</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. Управление cookies</h2>
+      <p>При первом визите вы можете принять все cookies или оставить только необходимые. Необходимые cookies требуются для входа и работы приложения.</p>
+      <p>Вы можете удалить данные в настройках браузера: «Очистить cookies и данные сайта» для localhost или вашего домена Таскли.</p>
+    </section>
+
+    <section>
+      <h2>4. Сторонние сервисы</h2>
+      <p>Таскли может загружать шрифты Google Fonts и библиотеку Bootstrap с CDN. Эти сервисы могут получать техническую информацию о вашем браузере.</p>
+    </section>
+
+    <p class="legal-footer">По вопросам обработки данных см. также <a href="privacy.html">Согласие на обработку персональных данных</a>.</p>
+  </div>
+  <script src="scripts/consent.js"></script>
+  <script src="scripts/pwa.js"></script>
+</body>
+</html>

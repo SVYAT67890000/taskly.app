@@ -3,25 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Календарь задач — Taskly</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="application-name" content="Таскли">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Таскли">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+  <title>Календарь — Таскли</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/design-light.css">
+  <link rel="stylesheet" href="styles/pwa.css">
+  <link rel="stylesheet" href="styles/mobile.css">
+  <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
 </head>
 <body>
 
-  <!-- Навигация -->
+  
   <nav class="navbar-modern">
     <div class="container">
       <div class="navbar-content">
         <a class="navbar-brand-modern" href="index.html">
-          <span class="brand-text">Taskly</span>
+          <img src="assets/logo.svg" alt="" class="brand-logo" width="28" height="28">
+          <span class="brand-text">Таскли</span>
         </a>
         <div class="navbar-right">
-          <button class="theme-toggle-btn-header" id="themeToggle" title="Переключить тему">
-            <span class="theme-icon-header">🌙</span>
+          <button class="theme-toggle-btn-header btn-icon-only" id="themeToggle" title="Переключить тему">
+            <span class="theme-icon-header"><ion-icon name="moon-outline"></ion-icon></span>
           </button>
           <div class="user-menu-container">
             <button class="user-menu-btn" id="userMenuBtn" type="button" title="Меню пользователя">
@@ -39,36 +53,13 @@
               </div>
               <div class="user-menu-divider"></div>
               <ul class="user-menu-list">
-                <li class="user-menu-item">
-                  <a href="profile.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Профиль</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="friends.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Друзья</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="index.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Мои задачи</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="calendar.html" class="user-menu-link active">
-                    <span class="menu-item-icon"></span>
-                    <span>Календарь</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="#" class="user-menu-link" id="menuLogoutBtn">
-                    <span class="menu-item-icon"></span>
-                    <span>Выйти из аккаунта</span>
-                  </a>
-                </li>
+                <li class="user-menu-item"><a href="profile.html" class="user-menu-link"><span class="menu-link-text">Профиль</span></a></li>
+                <li class="user-menu-item"><a href="friends.html" class="user-menu-link"><span class="menu-link-text">Друзья</span></a></li>
+                <li class="user-menu-item"><a href="index.html" class="user-menu-link"><span class="menu-link-text">Мои задачи</span></a></li>
+                <li class="user-menu-item"><a href="calendar.html" class="user-menu-link active"><span class="menu-link-text">Календарь</span></a></li>
+                <li class="user-menu-item"><a href="stats.html" class="user-menu-link"><span class="menu-link-text">Статистика</span></a></li>
+                <li class="user-menu-item"><a href="support.html" class="user-menu-link"><span class="menu-link-text">Поддержка</span></a></li>
+                <li class="user-menu-item"><a href="#" class="user-menu-link" id="menuLogoutBtn"><span class="menu-link-text">Выйти</span></a></li>
               </ul>
             </div>
           </div>
@@ -77,101 +68,25 @@
     </div>
   </nav>
 
-  <!-- Основной контент -->
-  <div class="main-container">
+  
+  <div class="main-container calendar-page-main">
     <div class="container-fluid">
       <div class="row g-4">
-        <!-- Левая колонка: кнопки и фильтры -->
-        <div class="col-lg-3 col-md-4 col-12">
-          <div class="sidebar-modern">
-            <div class="sidebar-header">
-              <h2 class="sidebar-title">Календарь</h2>
-            </div>
-            
-            <button class="btn-add-task" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-              <span class="btn-icon">+</span>
-              <span>Создать задачу</span>
-            </button>
-
-            <div class="projects-section">
-              <div class="projects-header">
-                <h2 class="sidebar-title">Проекты</h2>
-                <button class="btn-manage-projects" data-bs-toggle="modal" data-bs-target="#projectModal">
-                  + Проект
-                </button>
-              </div>
-              <div class="filter-group">
-                <label class="filter-label">Текущий проект</label>
-                <select class="filter-select" id="projectFilter">
-                  <option value="all">Все задачи</option>
-                  <option value="personal">Личные задачи</option>
-                </select>
-              </div>
-              <div class="project-overview-card" id="projectOverview">
-                <div class="project-overview-title">Выберите проект</div>
-                <p class="project-overview-text">Чтобы увидеть прогресс и участников, выберите проект из списка.</p>
-                <div class="project-progress">
-                  <div class="project-progress-track">
-                    <div class="project-progress-value" style="width:0%"></div>
-                  </div>
-                  <div class="project-progress-meta">
-                    <span class="project-progress-percent">0%</span>
-                    <span class="project-progress-summary">0 / 0 задач</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="offline-alert-modern d-none" id="offlineAlert">
-              <div class="alert-content">
-                <div class="alert-title">Оффлайн режим</div>
-                <div class="alert-text">Данные сохраняются локально</div>
-              </div>
-            </div>
-
-            <div class="reminder-widget" id="reminderWidget">
-              <div class="reminder-header">
-                <div>
-                  <h3 class="section-title">
-                    Напоминания
-                  </h3>
-                  <p class="reminder-subtitle">Управляйте уведомлениями о задачах.</p>
-                </div>
-                <label class="reminder-switch">
-                  <input type="checkbox" id="reminderToggle" class="reminder-switch-input">
-                  <span class="reminder-switch-slider"></span>
-                </label>
-              </div>
-              <div class="reminder-body">
-                <label class="filter-label">За сколько предупреждать</label>
-                <select class="filter-select" id="reminderLeadTime">
-                  <option value="0">В день задачи</option>
-                  <option value="1">За 1 день</option>
-                  <option value="3">За 3 дня</option>
-                  <option value="7">За неделю</option>
-                </select>
-                <div class="reminder-status" id="reminderStatus">Напоминания отключены</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Правая колонка: календарь -->
-        <div class="col-lg-9 col-md-8 col-12">
-          <div class="calendar-section">
+        <div class="col-12">
+          <div class="calendar-section calendar-section-full">
             <div class="calendar-header">
               <h2 class="calendar-title">Календарь задач</h2>
-              <div class="calendar-controls">
-                <button class="calendar-nav-btn" id="prevMonth" title="Предыдущий месяц">‹</button>
-                <div class="calendar-month-year" id="currentMonthYear"></div>
-                <button class="calendar-nav-btn" id="nextMonth" title="Следующий месяц">›</button>
-                <button class="calendar-today-btn" id="todayBtn">Сегодня</button>
+              <div class="calendar-header-actions">
+                <div class="calendar-controls">
+                  <button class="calendar-nav-btn" id="prevMonth" title="Предыдущий месяц"><ion-icon name="chevron-back-outline"></ion-icon></button>
+                  <div class="calendar-month-year" id="currentMonthYear"></div>
+                  <button class="calendar-nav-btn" id="nextMonth" title="Следующий месяц"><ion-icon name="chevron-forward-outline"></ion-icon></button>
+                  <button class="calendar-today-btn" id="todayBtn">Сегодня</button>
+                </div>
               </div>
             </div>
             
-            <div class="calendar-container" id="calendarContainer">
-              <!-- Календарь будет отрисован через JS -->
-            </div>
+            <div class="calendar-container" id="calendarContainer"></div>
 
             <div class="calendar-legend">
               <div class="legend-item">
@@ -193,7 +108,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно добавления задачи -->
+  
   <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern modal-large">
       <div class="modal-content-modern">
@@ -255,7 +170,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно проекта -->
+  
   <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern">
       <div class="modal-content-modern">
@@ -297,7 +212,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно редактирования -->
+  
   <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern">
       <div class="modal-content-modern">
@@ -397,13 +312,22 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="scripts/consent.js"></script>
+  <script src="scripts/pwa.js"></script>
   <script src="scripts/theme.js"></script>
   <script src="scripts/notifications.js"></script>
+  <script src="scripts/api.js"></script>
+  <script src="scripts/shared-ui.js"></script>
   <script src="scripts/auth.js"></script>
   <script src="scripts/projects.js"></script>
-  <script src="scripts/notes.js"></script>
   <script src="scripts/tasks.js"></script>
+  <script src="scripts/notification-settings.js"></script>
+  <script src="scripts/push-notifications.js"></script>
+  <script src="scripts/message-notifications.js"></script>
+  <script src="scripts/unread-messages.js"></script>
+  <script src="scripts/notification-center.js"></script>
   <script src="scripts/reminders.js"></script>
+  <script src="scripts/dashboard-tabs.js"></script>
   <script src="scripts/calendar.js"></script>
   <script src="scripts/sync.js"></script>
 </body>

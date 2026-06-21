@@ -1,7 +1,7 @@
 {
   "name": "taskly-app",
   "version": "1.0.0",
-  "description": "Taskly - Органайзер задач и заметок",
+  "description": "Таскли — органайзер задач и заметок",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,18 +15,18 @@
   ],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "express": "^4.18.2"
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "nodemailer": "^6.10.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
   }
 }
-
-
-
-
-
-
-
-

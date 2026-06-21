@@ -1,8 +1,8 @@
-// Напоминания о задачах
 
 const REMINDER_DEFAULTS = {
   enabled: true,
-  leadDays: 1
+  leadDays: 1,
+  pushEnabled: false
 };
 
 let reminderSettings = { ...REMINDER_DEFAULTS };
@@ -10,11 +10,15 @@ let reminderIntervalId = null;
 let reminderToggleEl;
 let reminderSelectEl;
 let reminderStatusEl;
+let pushToggleEl;
+let pushStatusEl;
 
 document.addEventListener('DOMContentLoaded', () => {
   reminderToggleEl = document.getElementById('reminderToggle');
   reminderSelectEl = document.getElementById('reminderLeadTime');
   reminderStatusEl = document.getElementById('reminderStatus');
+  pushToggleEl = document.getElementById('pushToggle');
+  pushStatusEl = document.getElementById('pushStatus');
 
   if (!reminderToggleEl || !reminderSelectEl) {
     return;
@@ -23,7 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
   reminderSettings = loadReminderSettings();
   reminderToggleEl.checked = reminderSettings.enabled;
   reminderSelectEl.value = String(reminderSettings.leadDays);
+  if (pushToggleEl) pushToggleEl.checked = reminderSettings.pushEnabled;
   updateReminderStatus();
+  updatePushStatus();
 
   reminderToggleEl.addEventListener('change', () => {
     reminderSettings.enabled = reminderToggleEl.checked;
@@ -42,9 +48,68 @@ document.addEventListener('DOMContentLoaded', () => {
     restartReminderLoop();
   });
 
+  pushToggleEl?.addEventListener('change', async () => {
+    try {
+      if (pushToggleEl.checked) {
+        await subscribeToPushNotifications();
+        reminderSettings.pushEnabled = true;
+        saveNotificationSettings({ pushEnabled: true });
+        showNotification?.('Push-уведомления включены', { type: 'success', icon: 'bell' });
+      } else {
+        await unsubscribeFromPushNotifications();
+        reminderSettings.pushEnabled = false;
+        saveNotificationSettings({ pushEnabled: false });
+        showNotification?.('Push-уведомления отключены', { type: 'info' });
+      }
+      saveReminderSettings(reminderSettings);
+      updatePushStatus();
+    } catch (err) {
+      pushToggleEl.checked = false;
+      reminderSettings.pushEnabled = false;
+      saveReminderSettings(reminderSettings);
+      showNotification?.(err.message || 'Не удалось включить push', { type: 'warning' });
+      updatePushStatus();
+    }
+  });
+
   restartReminderLoop();
-  requestNotificationPermission();
+  initPushState();
+  initNotificationPrefsUI();
 });
+
+function initNotificationPrefsUI() {
+  if (typeof getNotificationSettings !== 'function') return;
+  const s = getNotificationSettings();
+  const msgEl = document.getElementById('notifMessages');
+  const frEl = document.getElementById('notifFriendRequests');
+  const remEl = document.getElementById('notifReminders');
+  const soundEl = document.getElementById('notifSound');
+  if (msgEl) msgEl.checked = s.messages !== false;
+  if (frEl) frEl.checked = s.friendRequests !== false;
+  if (remEl) remEl.checked = s.reminders !== false;
+  if (soundEl) soundEl.checked = s.sound !== false;
+
+  const bind = (el, key) => {
+    el?.addEventListener('change', () => {
+      saveNotificationSettings({ [key]: el.checked });
+    });
+  };
+  bind(msgEl, 'messages');
+  bind(frEl, 'friendRequests');
+  bind(remEl, 'reminders');
+  bind(soundEl, 'sound');
+}
+
+async function initPushState() {
+  if (typeof syncPushSubscriptionState !== 'function') return;
+  const state = await syncPushSubscriptionState();
+  if (state === 'active') {
+    reminderSettings.pushEnabled = true;
+    if (pushToggleEl) pushToggleEl.checked = true;
+    saveReminderSettings(reminderSettings);
+  }
+  updatePushStatus();
+}
 
 function loadReminderSettings() {
   try {
@@ -93,6 +158,10 @@ function restartReminderLoop() {
 }
 
 function checkUpcomingTasks() {
+  if (typeof isNotificationEnabled === 'function' && !isNotificationEnabled('reminders')) {
+    setReminderStatusText('Уведомления о задачах отключены');
+    return;
+  }
   let userTasks = [];
 
   if (typeof getUserTasks === 'function') {
@@ -114,6 +183,7 @@ function checkUpcomingTasks() {
 
   const pendingTasks = userTasks.filter(task => task.status !== 'completed');
   if (pendingTasks.length === 0) {
+    setReminderStatusText('Ближайших задач нет');
     return;
   }
 
@@ -127,7 +197,6 @@ function checkUpcomingTasks() {
     if (!task.date) return;
 
     const dueDate = new Date(task.date);
-    // учитываем весь день задачи
     const dueEnd = new Date(dueDate);
     dueEnd.setHours(23, 59, 59, 999);
 
@@ -136,7 +205,6 @@ function checkUpcomingTasks() {
       return;
     }
 
-    // Проверяем, не отправляли ли уже напоминание
     if (history[task.id] === task.date) {
       return;
     }
@@ -147,7 +215,6 @@ function checkUpcomingTasks() {
 
   saveReminderHistory(history);
 
-  // Показываем ближайшую дату в статусе
   pendingTasks.forEach(task => {
     if (!task.date) return;
     const dueDate = new Date(task.date);
@@ -171,20 +238,20 @@ function checkUpcomingTasks() {
 }
 
 function showReminderNotification(task, diffMs) {
-  const minutesLeft = Math.ceil(diffMs / (60 * 1000));
+  const daysLeft = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
   let message = `«${task.title}» нужно выполнить сегодня`;
+  if (daysLeft > 1) message = `«${task.title}» через ${daysLeft} дн.`;
+  else if (daysLeft === 1) message = `«${task.title}» — завтра срок`;
 
-  if (minutesLeft > 60) {
-    const hoursLeft = Math.ceil(minutesLeft / 60);
-    message = `«${task.title}» запланирована через ${hoursLeft} ч.`;
-  } else if (minutesLeft > 0) {
-    message = `«${task.title}» запланирована через ${minutesLeft} мин.`;
+  if (typeof showBrowserNotification === 'function' && !reminderSettings.pushEnabled) {
+    showBrowserNotification('Таскли — напоминание', message, {
+      tag: `task-${task.id}-${task.date}`,
+      skipIfVisible: false
+    });
   }
 
   if (typeof showNotification === 'function') {
-    showNotification(message, { type: 'warning', icon: '⏰' });
-  } else {
-    alert(message);
+    showNotification(message, { type: 'warning', icon: 'reminder' });
   }
 }
 
@@ -192,9 +259,7 @@ function loadReminderHistory() {
   try {
     const key = getReminderStorageKey('history');
     const saved = localStorage.getItem(key);
-    if (saved) {
-      return JSON.parse(saved) || {};
-    }
+    if (saved) return JSON.parse(saved) || {};
   } catch (error) {
     console.error('Ошибка чтения истории напоминаний:', error);
   }
@@ -212,20 +277,29 @@ function saveReminderHistory(history) {
 
 function updateReminderStatus() {
   if (!reminderStatusEl) return;
-
   if (!reminderSettings.enabled) {
     setReminderStatusText('Напоминания отключены');
     return;
   }
+  setReminderStatusText(`Будем напоминать ${getLeadDaysText(reminderSettings.leadDays)}`);
+}
 
-  const leadDaysText = getLeadDaysText(reminderSettings.leadDays);
-  setReminderStatusText(`Будем напоминать ${leadDaysText}`);
+function updatePushStatus() {
+  if (!pushStatusEl) return;
+  if (!('PushManager' in window)) {
+    pushStatusEl.textContent = 'Push не поддерживается браузером';
+    if (pushToggleEl) pushToggleEl.disabled = true;
+    return;
+  }
+  if (reminderSettings.pushEnabled) {
+    pushStatusEl.textContent = 'Push включён — уведомления придут даже при закрытой вкладке';
+  } else {
+    pushStatusEl.textContent = 'Включите push для уведомлений в фоне';
+  }
 }
 
 function setReminderStatusText(text) {
-  if (reminderStatusEl) {
-    reminderStatusEl.textContent = text;
-  }
+  if (reminderStatusEl) reminderStatusEl.textContent = text;
 }
 
 function getLeadDaysText(value) {
@@ -236,10 +310,7 @@ function getLeadDaysText(value) {
 }
 
 function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    return;
-  }
-
+  if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     Notification.requestPermission().catch(() => {});
   }
@@ -248,32 +319,24 @@ function requestNotificationPermission() {
 function persistReminderPreference(leadDays) {
   if (typeof getCurrentUser !== 'function') return;
   const currentUser = getCurrentUser();
-  if (!currentUser || !currentUser.id) return;
-  
+  if (!currentUser?.id) return;
+
   const updatedPreferences = {
     ...(currentUser.preferences || {}),
     reminderLeadDays: leadDays
   };
-  
-  const updatedUser = { ...currentUser, preferences: updatedPreferences };
-  localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-  
-  if (typeof getUsers === 'function') {
-    const users = getUsers();
-    const userIndex = users.findIndex(user => user.id === currentUser.id);
-    if (userIndex >= 0) {
-      users[userIndex] = { ...users[userIndex], preferences: updatedPreferences };
-      localStorage.setItem('users', JSON.stringify(users));
-    }
+
+  localStorage.setItem('currentUser', JSON.stringify({ ...currentUser, preferences: updatedPreferences }));
+
+  if (typeof updateCurrentUserData === 'function') {
+    updateCurrentUserData({ preferences: updatedPreferences }).catch(() => {});
   }
 }
 
 function getStoredReminderPreference() {
   if (typeof getCurrentUser !== 'function') return null;
   const currentUser = getCurrentUser();
-  if (!currentUser || !currentUser.preferences) return null;
+  if (!currentUser?.preferences) return null;
   const value = currentUser.preferences.reminderLeadDays;
   return typeof value === 'number' ? value : null;
 }
-
-

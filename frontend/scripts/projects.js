@@ -1,4 +1,4 @@
-// Управление проектами и исполнителями
+
 
 let projectFilterEl;
 let projectOverviewEl;
@@ -157,21 +157,23 @@ function populateTaskProjectSelects() {
   });
 }
 
+function getFriendUsers() {
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const friendIds = user?.friends || [];
+  const users = typeof getUsers === 'function' ? getUsers() : [];
+  return users.filter(u => friendIds.includes(u.id));
+}
+
 function populateProjectMembersSelect() {
-  if (!projectMembersSelectEl || typeof getUsers !== 'function') return;
+  if (!projectMembersSelectEl) return;
 
-  const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-  const users = getUsers();
   projectMembersSelectEl.innerHTML = '';
-
-  users
-    .filter(user => !currentUser || user.id !== currentUser.id)
-    .forEach(user => {
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = `${user.username || user.email} (${user.email})`;
-      projectMembersSelectEl.appendChild(option);
-    });
+  getFriendUsers().forEach(user => {
+    const option = document.createElement('option');
+    option.value = user.id;
+    option.textContent = `${user.username || user.tag || user.email} (${user.email})`;
+    projectMembersSelectEl.appendChild(option);
+  });
 }
 
 function getAvailableProjects() {
@@ -199,6 +201,7 @@ function updateAssigneeOptions(targetId, projectId, selectedValues = []) {
 
   const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   const users = typeof getUsers === 'function' ? getUsers() : [];
+  const friendIds = currentUser?.friends || [];
 
   let memberIds = [];
 
@@ -208,7 +211,7 @@ function updateAssigneeOptions(targetId, projectId, selectedValues = []) {
       memberIds = Array.from(new Set([project.ownerId, ...(project.memberIds || [])]));
     }
   } else if (currentUser) {
-    memberIds = [currentUser.id];
+    memberIds = [currentUser.id, ...friendIds.filter(id => id !== currentUser.id)];
   }
 
   select.innerHTML = '';
@@ -217,7 +220,7 @@ function updateAssigneeOptions(targetId, projectId, selectedValues = []) {
     const user = users.find(u => u.id === memberId);
     const option = document.createElement('option');
     option.value = memberId;
-    option.textContent = user ? (user.username || user.email) : 'Участник';
+    option.textContent = user ? (user.username || user.tag || user.email) : 'Участник';
     select.appendChild(option);
   });
 
@@ -256,15 +259,14 @@ function renderProjectOverview(projectId) {
     const allTasks = currentUser
       ? tasks.filter(task => {
           const ownerId = task.ownerId || task.userId;
-          const assignees = Array.isArray(task.assignees) ? task.assignees : [];
           if (!task.projectId) {
             return ownerId === currentUser.id;
           }
           const project = (typeof getProjectById === 'function') ? getProjectById(task.projectId) : null;
           if (!project) return false;
-          const isMember = project.ownerId === currentUser.id || (project.memberIds || []).includes(currentUser.id);
-          const isAssigned = assignees.length === 0 || assignees.includes(currentUser.id);
-          return isMember && (isAssigned || project.ownerId === currentUser.id);
+          return typeof isProjectMember === 'function'
+            ? isProjectMember(project, currentUser.id)
+            : (project.ownerId === currentUser.id || (project.memberIds || []).includes(currentUser.id));
         })
       : tasks;
     updateOverviewUI({
@@ -300,12 +302,14 @@ function renderProjectOverview(projectId) {
   });
 }
 
-function updateOverviewUI({ title, description, completed, total }) {
+function updateOverviewUI({ title, description, completed, total, project }) {
   const titleEl = projectOverviewEl.querySelector('.project-overview-title');
   const textEl = projectOverviewEl.querySelector('.project-overview-text');
   const progressValueEl = projectOverviewEl.querySelector('.project-progress-value');
   const percentEl = projectOverviewEl.querySelector('.project-progress-percent');
   const summaryEl = projectOverviewEl.querySelector('.project-progress-summary');
+  let mindmapEl = projectOverviewEl.querySelector('.project-mindmap-link');
+  let membersEl = projectOverviewEl.querySelector('.project-members-list');
 
   const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
 
@@ -314,6 +318,37 @@ function updateOverviewUI({ title, description, completed, total }) {
   if (progressValueEl) progressValueEl.style.width = `${percent}%`;
   if (percentEl) percentEl.textContent = `${percent}%`;
   if (summaryEl) summaryEl.textContent = `${completed} / ${total} задач`;
+
+  if (project?.id) {
+    const memberIds = [project.ownerId, ...(project.memberIds || [])];
+    const users = typeof getUsers === 'function' ? getUsers() : [];
+    const names = memberIds.map(id => {
+      const u = users.find(user => user.id === id);
+      return u ? (u.username || u.tag || 'Участник') : 'Участник';
+    });
+    if (!membersEl) {
+      membersEl = document.createElement('div');
+      membersEl.className = 'project-members-list';
+      projectOverviewEl.appendChild(membersEl);
+    }
+    membersEl.textContent = `Участники: ${names.join(', ')}`;
+    membersEl.style.display = 'block';
+    membersEl.style.marginTop = '0.5rem';
+    membersEl.style.fontSize = '0.85rem';
+    membersEl.style.color = 'var(--text-muted)';
+
+    if (!mindmapEl) {
+      mindmapEl = document.createElement('a');
+      mindmapEl.className = 'project-mindmap-link btn-primary btn-sm';
+      projectOverviewEl.appendChild(mindmapEl);
+    }
+    mindmapEl.href = `mindmap.html?project=${encodeURIComponent(project.id)}`;
+    mindmapEl.innerHTML = '<ion-icon name="git-network-outline"></ion-icon> Открыть Mind Map';
+    mindmapEl.style.display = 'inline-flex';
+  } else {
+    if (membersEl) membersEl.style.display = 'none';
+    if (mindmapEl) mindmapEl.style.display = 'none';
+  }
 }
 
 function getAllStoredTasks() {

@@ -1,41 +1,54 @@
-// Управление авторизацией
 
-const DEFAULT_AVATAR_EMOJIS = ['👤', '🙂', '🐱', '🦊', '🐼', '🐻', '🐸', '🦄', '🌟', '🚀'];
 
-// Проверка авторизации при загрузке страницы
+const DEFAULT_AVATAR_EMOJIS = ['👤'];
+
+
 document.addEventListener('DOMContentLoaded', () => {
   checkAuth();
   setupLoginForm();
   setupRegisterForm();
+  setupForgotPassword();
   setupLogout();
   setupUserMenu();
   updateUserInfo();
 });
 
-// Проверка авторизации
+
 function checkAuth() {
-  const token = localStorage.getItem('userToken');
+  const token = localStorage.getItem('userToken') || sessionStorage.getItem('userToken');
   const currentUser = getCurrentUser();
   
-  // Если пользователь не авторизован и находится на главной странице, перенаправляем на страницу входа
   if (!token || !currentUser) {
-    if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) {
+    const protectedPages = ['index.html', 'calendar.html', 'profile.html', 'friends.html', 'stats.html', 'mindmap.html', 'notes.html', 'support.html'];
+    const path = window.location.pathname;
+    if (protectedPages.some(p => path.includes(p)) || path.endsWith('/')) {
       window.location.href = 'login.html';
     }
     return false;
   }
   
-  // Если пользователь авторизован и находится на странице входа/регистрации, перенаправляем на главную
   if (token && currentUser) {
     if (window.location.pathname.includes('login.html') || window.location.pathname.includes('register.html')) {
-      window.location.href = 'index.html';
+      verifySessionAndRedirect();
+      return false;
     }
+    bootstrapUserData();
   }
   
   return true;
 }
 
-// Получение текущего пользователя
+async function verifySessionAndRedirect() {
+  if (typeof TasklyApi === 'undefined') return;
+  try {
+    await TasklyApi.me();
+    window.location.href = 'index.html';
+  } catch (_) {
+    clearAuthSession();
+  }
+}
+
+
 function getCurrentUser() {
   const userStr = localStorage.getItem('currentUser');
   if (userStr) {
@@ -48,24 +61,26 @@ function getCurrentUser() {
   return null;
 }
 
-// Сохранение пользователя
-function saveUser(user) {
+
+function saveUser(user, token) {
   const normalizedUser = normalizeUser(user);
   localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
-  localStorage.setItem('userToken', generateToken(user.email));
+  if (token) {
+    localStorage.setItem('userToken', token);
+  }
 }
 
-// Генерация токена (упрощенная версия)
+
 function generateToken(email) {
   return btoa(email + ':' + Date.now()).replace(/[^a-zA-Z0-9]/g, '');
 }
 
-// Настройка формы входа
+
 function setupLoginForm() {
   const loginForm = document.querySelector('#loginForm');
   if (!loginForm) return;
   
-  loginForm.addEventListener('submit', (e) => {
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const email = document.getElementById('loginEmail').value.trim();
@@ -73,42 +88,118 @@ function setupLoginForm() {
     const rememberMe = document.getElementById('rememberMe')?.checked || false;
     
     if (!email || !password) {
-      alert('Пожалуйста, заполните все поля');
+      showAppError?.('Заполните поля', 'Введите email и пароль для входа.');
       return;
     }
-    
-    // Получаем зарегистрированных пользователей
-    const users = getUsers();
-    
-    // Проверяем существование пользователя
-    const user = users.find(u => u.email === email && u.password === password);
-    
-    if (!user) {
-      alert('Неверный email или пароль');
+    if (!validateEmail?.(email)) {
+      showAppError?.('Некорректный email', 'Проверьте формат адреса электронной почты.');
       return;
     }
-    
-    // Сохраняем пользователя
-    saveUser(user);
-    
-    // Если "Запомнить меня" не выбрано, токен будет удален при закрытии браузера
-    if (!rememberMe) {
-      // Используем sessionStorage для временного хранения
-      sessionStorage.setItem('userToken', localStorage.getItem('userToken'));
-      sessionStorage.setItem('currentUser', localStorage.getItem('currentUser'));
+
+    try {
+      const { token, user } = await TasklyApi.login({ email, password });
+      await applyAuthSession(token, user, rememberMe);
+      window.location.href = 'index.html';
+    } catch (err) {
+      showAppError?.('Ошибка входа', err.message || 'Неверный email или пароль');
     }
-    
-    // Перенаправляем на главную страницу
-    window.location.href = 'index.html';
   });
 }
 
-// Настройка формы регистрации
+
+function setupForgotPassword() {
+  const openBtn = document.getElementById('forgotPasswordLink');
+  const modal = document.getElementById('forgotPasswordModal');
+  if (!openBtn || !modal) return;
+
+  const emailInput = document.getElementById('resetEmail');
+  const codeInput = document.getElementById('resetCode');
+  const passInput = document.getElementById('resetNewPassword');
+  const confirmInput = document.getElementById('resetConfirmPassword');
+  const sendBtn = document.getElementById('sendResetCodeBtn');
+  const submitBtn = document.getElementById('submitResetBtn');
+
+  function showModal() {
+    modal.classList.remove('app-modal-hidden');
+    emailInput?.focus();
+  }
+
+  function hideModal() {
+    modal.classList.add('app-modal-hidden');
+  }
+
+  openBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const loginEmail = document.getElementById('loginEmail')?.value.trim();
+    if (loginEmail && emailInput) emailInput.value = loginEmail;
+    if (typeof initPasswordToggles === 'function') initPasswordToggles(modal);
+    showModal();
+  });
+
+  modal.querySelector('[data-close-forgot]')?.addEventListener('click', hideModal);
+  document.getElementById('forgotPasswordCancel')?.addEventListener('click', hideModal);
+
+  sendBtn?.addEventListener('click', async () => {
+    const email = emailInput?.value.trim();
+    if (!email || !validateEmail?.(email)) {
+      showAppError?.('Email', 'Введите корректный email.');
+      return;
+    }
+    sendBtn.disabled = true;
+    try {
+      const data = await TasklyApi.forgotPassword(email);
+      showNotification?.(data.message || 'Код отправлен на email', { type: 'success' });
+    } catch (e) {
+      showAppError?.('Ошибка', e.message);
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+
+  submitBtn?.addEventListener('click', async () => {
+    const email = emailInput?.value.trim();
+    const code = codeInput?.value.trim();
+    const password = passInput?.value;
+    const confirm = confirmInput?.value;
+
+    if (!email || !validateEmail?.(email)) {
+      showAppError?.('Email', 'Введите корректный email.');
+      return;
+    }
+    if (!code) {
+      showAppError?.('Код', 'Введите код из письма.');
+      return;
+    }
+    const pwdErr = validatePassword?.(password);
+    if (pwdErr) {
+      showAppError?.('Пароль', pwdErr);
+      return;
+    }
+    if (password !== confirm) {
+      showAppError?.('Пароли', 'Пароли не совпадают.');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    try {
+      await TasklyApi.resetPassword(email, code, password);
+      hideModal();
+      showNotification?.('Пароль обновлён. Войдите с новым паролем.', { type: 'success' });
+      if (document.getElementById('loginEmail')) document.getElementById('loginEmail').value = email;
+    } catch (e) {
+      showAppError?.('Ошибка', e.message);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+
 function setupRegisterForm() {
   const registerForm = document.querySelector('#registerForm');
   if (!registerForm) return;
   
-  registerForm.addEventListener('submit', (e) => {
+  registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const username = document.getElementById('registerUsername').value.trim();
@@ -117,63 +208,133 @@ function setupRegisterForm() {
     const confirmPassword = document.getElementById('confirmPassword').value;
     
     if (!username || !email || !password || !confirmPassword) {
-      alert('Пожалуйста, заполните все поля');
+      showAppError?.('Заполните поля', 'Все поля регистрации обязательны.');
       return;
     }
-    
+    if (!validateUsername?.(username)) {
+      showAppError?.('Некорректное имя', 'Имя: от 2 до 32 символов, только буквы, цифры, пробел, точка и дефис.');
+      return;
+    }
+    if (!validateEmail?.(email)) {
+      showAppError?.('Некорректный email', 'Проверьте формат адреса электронной почты.');
+      return;
+    }
+    const pwdErr = validatePassword?.(password);
+    if (pwdErr) {
+      showAppError?.('Слабый пароль', pwdErr);
+      return;
+    }
     if (password !== confirmPassword) {
-      alert('Пароли не совпадают');
+      showAppError?.('Пароли не совпадают', 'Повторите пароль так же, как в первом поле.');
       return;
     }
-    
-    if (password.length < 6) {
-      alert('Пароль должен содержать минимум 6 символов');
-      return;
-    }
-    
-    // Получаем зарегистрированных пользователей
-    const users = getUsers();
-    
-    // Проверяем, не зарегистрирован ли уже пользователь с таким email
-    if (users.find(u => u.email === email)) {
-      alert('Пользователь с таким email уже зарегистрирован');
-      return;
-    }
-    
-    // Создаем нового пользователя
-    const newUser = {
-      id: Date.now().toString(),
-      username: username,
-      email: email,
-      password: password,
-      createdAt: new Date().toISOString(),
-      avatar: getDefaultAvatar(),
-      status: '',
-      phone: '',
-      bio: '',
-      preferences: {
-        reminderLeadDays: 1
-      },
-      friends: [],
-      friendRequests: {
-        incoming: [],
-        outgoing: []
+
+    const hasConsent = typeof getPersonalDataConsent === 'function' && getPersonalDataConsent()?.accepted;
+    if (!hasConsent) {
+      if (typeof showPersonalDataModal === 'function') {
+        showPersonalDataModal({
+          force: true,
+          onAccept: () => document.getElementById('registerForm')?.requestSubmit()
+        });
+      } else {
+        showAppError?.('Нужно согласие', 'Необходимо согласие на обработку персональных данных');
       }
-    };
-    
-    // Добавляем пользователя
-    users.push(newUser);
-    saveUsers(users);
-    
-    // Автоматически входим
-    saveUser(newUser);
-    
-    // Перенаправляем на главную страницу
-    window.location.href = 'index.html';
+      return;
+    }
+
+    try {
+      const { token, user } = await TasklyApi.register({
+        username,
+        email,
+        password,
+        personalDataConsent: true
+      });
+      await applyAuthSession(token, user, true);
+      window.location.href = 'index.html';
+    } catch (err) {
+      showAppError?.('Ошибка регистрации', err.message || 'Не удалось зарегистрироваться');
+    }
   });
 }
 
-// Получение списка пользователей
+async function applyAuthSession(token, user, persist = true) {
+  const normalized = normalizeUser(user);
+  if (persist) {
+    localStorage.setItem('userToken', token);
+    localStorage.setItem('currentUser', JSON.stringify(normalized));
+  } else {
+    sessionStorage.setItem('userToken', token);
+    sessionStorage.setItem('currentUser', JSON.stringify(normalized));
+    localStorage.setItem('userToken', token);
+    localStorage.setItem('currentUser', JSON.stringify(normalized));
+  }
+  await bootstrapUserData();
+}
+
+async function bootstrapUserData() {
+  if (typeof TasklyApi === 'undefined') return;
+  try {
+    const data = await TasklyApi.bootstrap();
+    localStorage.setItem('tasks', JSON.stringify(data.tasks || []));
+    localStorage.setItem('projects', JSON.stringify(data.projects || []));
+    mergeUsersCache(data.users || []);
+    const current = getCurrentUser();
+    if (current) {
+      const merged = normalizeUser({
+        ...current,
+        friends: data.friends || [],
+        friendRequests: data.friendRequests || { incoming: [], outgoing: [] }
+      });
+      localStorage.setItem('currentUser', JSON.stringify(merged));
+    }
+    localStorage.setItem('achievements', JSON.stringify(data.achievements || []));
+    localStorage.setItem('userStats', JSON.stringify(data.stats || {}));
+    if (data.notes) {
+      const user = getCurrentUser();
+      localStorage.setItem(`taskly.notes.${user?.id || 'anon'}`, JSON.stringify(data.notes));
+    }
+    if (typeof initMessageNotifications === 'function') initMessageNotifications();
+    if (typeof updateUnreadBadgesUI === 'function') updateUnreadBadgesUI();
+    if (typeof renderNotificationCenter === 'function') renderNotificationCenter();
+  } catch (e) {
+    console.warn('Bootstrap:', e.message);
+    if (e.status === 401) {
+      clearAuthSession();
+      if (!window.location.pathname.includes('login.html') && !window.location.pathname.includes('register.html')) {
+        window.location.href = 'login.html';
+      }
+    }
+  }
+}
+
+function mergeUsersCache(incomingUsers) {
+  if (!Array.isArray(incomingUsers) || !incomingUsers.length) return;
+  const existing = getUsers();
+  const map = new Map(existing.map(u => [u.id, u]));
+  incomingUsers.forEach(u => {
+    const normalized = typeof normalizeUser === 'function' ? normalizeUser(u) : u;
+    map.set(normalized.id, { ...map.get(normalized.id), ...normalized });
+  });
+  localStorage.setItem('users', JSON.stringify([...map.values()]));
+}
+
+function updateFriendRequestsInUser(friends, incoming, outgoing) {
+  const current = getCurrentUser();
+  if (!current) return;
+  const merged = normalizeUser({
+    ...current,
+    friends: friends || current.friends || [],
+    friendRequests: { incoming: incoming || [], outgoing: outgoing || [] }
+  });
+  localStorage.setItem('currentUser', JSON.stringify(merged));
+}
+
+function isProjectMember(project, userId) {
+  if (!project || !userId) return false;
+  return project.ownerId === userId || (project.memberIds || []).includes(userId);
+}
+
+
 function getUsers() {
   const usersStr = localStorage.getItem('users');
   if (usersStr) {
@@ -186,13 +347,14 @@ function getUsers() {
   return [];
 }
 
-// Сохранение списка пользователей
+
 function saveUsers(users) {
   localStorage.setItem('users', JSON.stringify(users));
 }
 
-// Настройка кнопки выхода
+
 function setupLogout() {
+  if (typeof ensureSharedModals === 'function') ensureSharedModals();
   const modalElement = document.getElementById('logoutConfirmModal');
   let logoutModal = null;
   
@@ -223,7 +385,7 @@ function setupLogout() {
   handleClick(document.getElementById('menuLogoutBtn'));
 }
 
-// Настройка меню пользователя
+
 function setupUserMenu() {
   const userMenuBtn = document.getElementById('userMenuBtn');
   const userMenuContainer = document.querySelector('.user-menu-container');
@@ -231,20 +393,20 @@ function setupUserMenu() {
   
   if (!userMenuBtn || !userMenuContainer || !userMenuDropdown) return;
   
-  // Открытие/закрытие меню при клике на кнопку
+  
   userMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     userMenuContainer.classList.toggle('active');
   });
   
-  // Закрытие меню при клике вне его
+  
   document.addEventListener('click', (e) => {
     if (!userMenuContainer.contains(e.target)) {
       userMenuContainer.classList.remove('active');
     }
   });
   
-  // Закрытие меню при клике на пункт меню
+  
   const menuLinks = userMenuDropdown.querySelectorAll('.user-menu-link');
   menuLinks.forEach(link => {
     link.addEventListener('click', () => {
@@ -253,13 +415,13 @@ function setupUserMenu() {
   });
 }
 
-// Обновление информации о пользователе в меню
+
 function updateUserInfo() {
   const currentUser = getCurrentUser();
   
   if (!currentUser) return;
   
-  // Обновляем имя пользователя
+  
   const userNameEl = document.getElementById('userName');
   const menuUserNameEl = document.getElementById('menuUserName');
   
@@ -271,10 +433,10 @@ function updateUserInfo() {
     menuUserNameEl.textContent = currentUser.username || 'Пользователь';
   }
   
-  // Обновляем email
+  
   const menuUserEmailEl = document.getElementById('menuUserEmail');
   if (menuUserEmailEl) {
-    menuUserEmailEl.textContent = currentUser.email || '';
+    menuUserEmailEl.textContent = currentUser.tag || currentUser.email || '';
   }
   
   const userAvatarEl = document.getElementById('userAvatar');
@@ -283,16 +445,28 @@ function updateUserInfo() {
   applyAvatarToElement(menuUserAvatarEl, currentUser.avatar);
 }
 
-// Выход из системы
-function logout() {
+
+function clearAuthSession() {
   localStorage.removeItem('userToken');
   localStorage.removeItem('currentUser');
   sessionStorage.removeItem('userToken');
   sessionStorage.removeItem('currentUser');
-  window.location.href = 'login.html';
 }
 
-// Получение задач пользователя (личных и проектных)
+async function logout() {
+  try {
+    if (typeof TasklyApi !== 'undefined') {
+      await TasklyApi.logout();
+    }
+  } catch (_) {
+    /* выход локально даже если сервер недоступен */
+  } finally {
+    clearAuthSession();
+    window.location.href = 'login.html';
+  }
+}
+
+
 function getUserTasks() {
   const currentUser = getCurrentUser();
   if (!currentUser) return [];
@@ -315,7 +489,7 @@ function getUserTasks() {
   });
 }
 
-// Сохранение задач пользователя (для обратной совместимости)
+
 function saveUserTasks(tasks) {
   const currentUser = getCurrentUser();
   if (!currentUser) return;
@@ -333,7 +507,7 @@ function saveUserTasks(tasks) {
   saveAllTasks([...otherTasks, ...personalTasks]);
 }
 
-// Получение всех задач (для всех пользователей)
+
 function getAllTasks() {
   const tasksStr = localStorage.getItem('tasks');
   if (tasksStr) {
@@ -346,12 +520,15 @@ function getAllTasks() {
   return [];
 }
 
-// Сохранение всех задач
+
 function saveAllTasks(tasks) {
   localStorage.setItem('tasks', JSON.stringify(tasks));
+  if (typeof TasklyApi !== 'undefined') {
+    TasklyApi.syncTasks(tasks).catch(err => console.warn('Sync tasks:', err.message));
+  }
 }
 
-// Работа с проектами
+
 function getAllProjects() {
   const projectsStr = localStorage.getItem('projects');
   if (projectsStr) {
@@ -382,12 +559,27 @@ function getUserProjects() {
 function saveProject(project) {
   const projects = getAllProjects();
   const index = projects.findIndex(p => p.id === project.id);
-  if (index >= 0) {
+  const exists = index >= 0;
+  if (exists) {
     projects[index] = project;
   } else {
     projects.push(project);
   }
   saveAllProjects(projects);
+  if (typeof TasklyApi !== 'undefined') {
+    TasklyApi.saveProject({ ...project, _exists: exists }).then(saved => {
+      if (saved) {
+        const all = getAllProjects();
+        const i = all.findIndex(p => p.id === saved.id);
+        if (i >= 0) all[i] = saved;
+        else all.push(saved);
+        saveAllProjects(all);
+        if (typeof bootstrapUserData === 'function') {
+          bootstrapUserData();
+        }
+      }
+    }).catch(err => console.warn('Save project:', err.message));
+  }
 }
 
 function getProjectById(projectId) {
@@ -405,15 +597,30 @@ function upsertTask(task) {
     allTasks.push(task);
   }
   saveAllTasks(allTasks);
+  if (typeof TasklyApi !== 'undefined') {
+    TasklyApi.saveTask(allTasks[index >= 0 ? index : allTasks.length - 1])
+      .then(saved => {
+        if (saved) {
+          const tasks = getAllTasks();
+          const i = tasks.findIndex(t => t.id === saved.id);
+          if (i >= 0) tasks[i] = saved;
+          saveAllTasks(tasks);
+        }
+      })
+      .catch(err => console.warn('Save task:', err.message));
+  }
 }
 
 function deleteTaskById(taskId) {
   const allTasks = getAllTasks();
   const filtered = allTasks.filter(task => task.id !== taskId);
   saveAllTasks(filtered);
+  if (typeof TasklyApi !== 'undefined') {
+    TasklyApi.deleteTask(taskId).catch(err => console.warn('Delete task:', err.message));
+  }
 }
 
-// Экспорт функций
+
 window.getCurrentUser = getCurrentUser;
 window.getUserTasks = getUserTasks;
 window.saveUserTasks = saveUserTasks;
@@ -434,6 +641,10 @@ window.sendFriendRequest = sendFriendRequest;
 window.cancelFriendRequest = cancelFriendRequest;
 window.respondFriendRequest = respondFriendRequest;
 window.removeFriend = removeFriend;
+window.bootstrapUserData = bootstrapUserData;
+window.mergeUsersCache = mergeUsersCache;
+window.updateFriendRequestsInUser = updateFriendRequestsInUser;
+window.isProjectMember = isProjectMember;
 
 function getDefaultAvatar() {
   const emoji = DEFAULT_AVATAR_EMOJIS[Math.floor(Math.random() * DEFAULT_AVATAR_EMOJIS.length)];
@@ -452,15 +663,28 @@ function normalizeAvatar(avatar) {
 }
 
 function normalizeUser(user) {
+  const tag = user.tag || (user.username && user.discriminator
+    ? `${user.username}#${user.discriminator}`
+    : user.username || '');
   return {
     ...user,
+    tag,
+    publicId: user.publicId || user.public_id || '',
+    discriminator: user.discriminator || '',
     avatar: normalizeAvatar(user.avatar),
     status: user.status || '',
     phone: user.phone || '',
     bio: user.bio || '',
     preferences: {
       ...(user.preferences || {}),
-      reminderLeadDays: user.preferences?.reminderLeadDays ?? 1
+      reminderLeadDays: user.preferences?.reminderLeadDays ?? 1,
+      notifications: {
+        messages: user.preferences?.notifications?.messages !== false,
+        reminders: user.preferences?.notifications?.reminders !== false,
+        friendRequests: user.preferences?.notifications?.friendRequests !== false,
+        pushEnabled: user.preferences?.notifications?.pushEnabled === true,
+        sound: user.preferences?.notifications?.sound !== false
+      }
     },
     friends: Array.isArray(user.friends) ? user.friends : [],
     friendRequests: {
@@ -486,7 +710,7 @@ function applyAvatarToElement(element, avatar) {
   }
 }
 
-function updateCurrentUserData(updates = {}) {
+async function updateCurrentUserData(updates = {}) {
   const currentUser = getCurrentUser();
   if (!currentUser) return null;
   
@@ -494,36 +718,37 @@ function updateCurrentUserData(updates = {}) {
   if (updates.avatar) {
     updatedData.avatar = normalizeAvatar(updates.avatar);
   }
+
+  try {
+    if (typeof TasklyApi !== 'undefined') {
+      const { user } = await TasklyApi.updateProfile(updatedData);
+      const mergedUser = normalizeUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(mergedUser));
+      updateUserInfo();
+      return mergedUser;
+    }
+  } catch (e) {
+    console.warn('Update profile:', e.message);
+  }
   
   const mergedUser = normalizeUser({ ...currentUser, ...updatedData });
   localStorage.setItem('currentUser', JSON.stringify(mergedUser));
-  
-  const users = getUsers();
-  const index = users.findIndex(user => user.id === mergedUser.id);
-  if (index >= 0) {
-    users[index] = { ...users[index], ...updatedData };
-    users[index] = normalizeUser(users[index]);
-    saveUsers(users);
-  }
-  
   updateUserInfo();
   return mergedUser;
 }
 
-function updateUserPassword(newPassword) {
+async function updateUserPassword(code, newPassword) {
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
-  
-  const updatedUser = { ...currentUser, password: newPassword };
-  localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-  
-  const users = getUsers();
-  const index = users.findIndex(user => user.id === currentUser.id);
-  if (index >= 0) {
-    users[index].password = newPassword;
-    saveUsers(users);
+  try {
+    if (typeof TasklyApi !== 'undefined') {
+      await TasklyApi.changePassword(code, newPassword);
+      return true;
+    }
+  } catch (e) {
+    showNotification?.(e.message || 'Не удалось сменить пароль', { type: 'warning' });
+    return false;
   }
-  
   return true;
 }
 
@@ -581,95 +806,53 @@ function getFriendData() {
   };
 }
 
-function sendFriendRequest(email) {
+async function sendFriendRequest(query) {
   const currentUser = getCurrentUser();
   if (!currentUser) return { success: false, message: 'Не авторизованы' };
-  
-  const users = getUsers();
-  const target = users.find(user => user.email === email);
-  if (!target) return { success: false, message: 'Пользователь не найден' };
-  if (target.id === currentUser.id) return { success: false, message: 'Нельзя добавить себя' };
-  
-  const currentData = normalizeUser(currentUser);
-  if (currentData.friends.includes(target.id)) {
-    return { success: false, message: 'Пользователь уже в друзьях' };
+
+  try {
+    await TasklyApi.sendFriendRequest(query);
+    await bootstrapUserData();
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: e.message || 'Не удалось отправить заявку' };
   }
-  
-  if (!currentData.friendRequests.outgoing.includes(target.id)) {
-    currentData.friendRequests.outgoing.push(target.id);
-  }
-  
-  const targetData = normalizeUser(target);
-  if (!targetData.friendRequests.incoming.includes(currentUser.id)) {
-    targetData.friendRequests.incoming.push(currentUser.id);
-  }
-  
-  persistUserData(currentData);
-  persistUserData(targetData);
-  return { success: true };
 }
 
-function cancelFriendRequest(targetUserId) {
+async function cancelFriendRequest(targetUserId) {
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
-  
-  const users = getUsers();
-  const target = users.find(user => user.id === targetUserId);
-  if (!target) return false;
-  
-  const currentData = normalizeUser(currentUser);
-  currentData.friendRequests.outgoing = currentData.friendRequests.outgoing.filter(id => id !== targetUserId);
-  persistUserData(currentData);
-  
-  const targetData = normalizeUser(target);
-  targetData.friendRequests.incoming = targetData.friendRequests.incoming.filter(id => id !== currentUser.id);
-  persistUserData(targetData);
-  return true;
+  try {
+    await TasklyApi.cancelFriendRequest(targetUserId);
+    await bootstrapUserData();
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
-function respondFriendRequest(requestUserId, accept) {
+async function respondFriendRequest(requestUserId, accept) {
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
-  
-  const users = getUsers();
-  const requester = users.find(user => user.id === requestUserId);
-  if (!requester) return false;
-  
-  const currentData = normalizeUser(currentUser);
-  currentData.friendRequests.incoming = currentData.friendRequests.incoming.filter(id => id !== requestUserId);
-  if (accept) {
-    if (!currentData.friends.includes(requestUserId)) {
-      currentData.friends.push(requestUserId);
-    }
+  try {
+    await TasklyApi.respondFriendRequest(requestUserId, accept);
+    await bootstrapUserData();
+    return true;
+  } catch (_) {
+    return false;
   }
-  persistUserData(currentData);
-  
-  const requesterData = normalizeUser(requester);
-  requesterData.friendRequests.outgoing = requesterData.friendRequests.outgoing.filter(id => id !== currentUser.id);
-  if (accept) {
-    if (!requesterData.friends.includes(currentUser.id)) {
-      requesterData.friends.push(currentUser.id);
-    }
-  }
-  persistUserData(requesterData);
-  return true;
 }
 
-function removeFriend(friendId) {
+async function removeFriend(friendId) {
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
-  const users = getUsers();
-  const friend = users.find(user => user.id === friendId);
-  if (!friend) return false;
-  
-  const currentData = normalizeUser(currentUser);
-  currentData.friends = currentData.friends.filter(id => id !== friendId);
-  persistUserData(currentData);
-  
-  const friendData = normalizeUser(friend);
-  friendData.friends = friendData.friends.filter(id => id !== currentUser.id);
-  persistUserData(friendData);
-  return true;
+  try {
+    await TasklyApi.removeFriend(friendId);
+    await bootstrapUserData();
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function persistUserData(userData) {

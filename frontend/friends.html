@@ -3,12 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Друзья — Taskly</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="application-name" content="Таскли">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Таскли">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+  <title>Друзья — Таскли</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/design-light.css">
+  <link rel="stylesheet" href="styles/pwa.css">
+  <link rel="stylesheet" href="styles/mobile.css">
+  <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -16,11 +30,12 @@
     <div class="container">
       <div class="navbar-content">
         <a class="navbar-brand-modern" href="index.html">
-          <span class="brand-text">Taskly</span>
+          <img src="assets/logo.svg" alt="" class="brand-logo" width="28" height="28">
+          <span class="brand-text">Таскли</span>
         </a>
         <div class="navbar-right">
-          <button class="theme-toggle-btn-header" id="themeToggle" title="Переключить тему">
-            <span class="theme-icon-header">🌙</span>
+          <button class="theme-toggle-btn-header btn-icon-only" id="themeToggle" title="Переключить тему">
+            <span class="theme-icon-header"><ion-icon name="moon-outline"></ion-icon></span>
           </button>
           <div class="user-menu-container">
             <button class="user-menu-btn" id="userMenuBtn" type="button" title="Меню пользователя">
@@ -38,36 +53,13 @@
               </div>
               <div class="user-menu-divider"></div>
               <ul class="user-menu-list">
-                <li class="user-menu-item">
-                  <a href="profile.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Профиль</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="friends.html" class="user-menu-link active">
-                    <span class="menu-item-icon"></span>
-                    <span>Друзья</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="index.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Мои задачи</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="calendar.html" class="user-menu-link">
-                    <span class="menu-item-icon"></span>
-                    <span>Календарь</span>
-                  </a>
-                </li>
-                <li class="user-menu-item">
-                  <a href="#" class="user-menu-link" id="menuLogoutBtn">
-                    <span class="menu-item-icon"></span>
-                    <span>Выйти из аккаунта</span>
-                  </a>
-                </li>
+                <li class="user-menu-item"><a href="profile.html" class="user-menu-link"><span class="menu-link-text">Профиль</span></a></li>
+                <li class="user-menu-item"><a href="friends.html" class="user-menu-link active"><span class="menu-link-text">Друзья</span><span class="nav-unread-badge d-none" id="navFriendsUnread">0</span></a></li>
+                <li class="user-menu-item"><a href="index.html" class="user-menu-link"><span class="menu-link-text">Мои задачи</span></a></li>
+                <li class="user-menu-item"><a href="calendar.html" class="user-menu-link"><span class="menu-link-text">Календарь</span></a></li>
+                <li class="user-menu-item"><a href="stats.html" class="user-menu-link"><span class="menu-link-text">Статистика</span></a></li>
+                <li class="user-menu-item"><a href="support.html" class="user-menu-link"><span class="menu-link-text">Поддержка</span></a></li>
+                <li class="user-menu-item"><a href="#" class="user-menu-link" id="menuLogoutBtn"><span class="menu-link-text">Выйти</span></a></li>
               </ul>
             </div>
           </div>
@@ -78,55 +70,82 @@
 
   <div class="friends-page">
     <div class="container-fluid">
+      <div class="friends-mobile-tabs" id="friendsMobileTabs">
+        <button type="button" class="friends-tab-btn active" data-panel="friends">Друзья</button>
+        <button type="button" class="friends-tab-btn" data-panel="chat">
+          Чат
+          <span class="tab-badge d-none" id="chatUnreadBadge">0</span>
+        </button>
+        <button type="button" class="friends-tab-btn" data-panel="requests">Заявки</button>
+      </div>
       <div class="friends-layout">
-        <aside class="friends-panel">
+        <aside class="friends-panel" data-friends-panel="friends">
           <div class="friends-panel-header">
             <h2>Друзья</h2>
-            <button class="btn-secondary" id="refreshFriendsBtn">Обновить</button>
+            <button class="btn-secondary btn-sm" id="refreshFriendsBtn">Обновить</button>
           </div>
           <div class="friends-search">
-            <input type="email" class="form-input-modern" id="friendEmailInput" placeholder="Email пользователя">
+            <input type="text" class="form-input-modern" id="friendQueryInput" placeholder="Ник#1234 или TL-XXXXXX">
+            <p class="friends-hint">Имя#Тег или личный ID из профиля</p>
             <button class="btn-primary" id="sendFriendRequestBtn">Отправить заявку</button>
           </div>
-
           <div class="friends-section">
-            <h3>Ваши друзья</h3>
+            <div class="friends-section-head">
+              <h3>Беседы</h3>
+              <button type="button" class="btn-secondary btn-sm" id="createGroupBtn">+ Беседа</button>
+            </div>
+            <div id="groupChatsList" class="friends-list empty-state-sm"></div>
+          </div>
+          <div class="friends-section">
+            <h3>Список</h3>
             <div id="friendsList" class="friends-list empty-state-sm">
               <p>Пока нет друзей. Добавьте кого-нибудь!</p>
             </div>
           </div>
         </aside>
 
-        <main class="friends-chat">
+        <main class="friends-chat" data-friends-panel="chat">
           <div class="chat-header">
-            <div class="chat-user">
-              <div>
-                <h3 id="chatUserName">Выберите собеседника</h3>
-                <p id="chatUserStatus">Чтобы начать переписку, выберите друга слева.</p>
+            <div class="chat-header-row">
+              <button type="button" class="chat-back-btn btn-icon-only" id="chatBackBtn" aria-label="Назад">
+                <ion-icon name="arrow-back-outline"></ion-icon>
+              </button>
+              <div class="chat-user">
+                <div>
+                  <h3 id="chatUserName">Выберите собеседника</h3>
+                  <p id="chatUserStatus">Выберите друга из списка</p>
+                </div>
               </div>
             </div>
-            <button class="btn-secondary" id="removeFriendBtn" disabled>Удалить из друзей</button>
-          </div>
-          <div class="chat-messages" id="chatMessages">
-            <div class="chat-placeholder">
-              <p>Здесь появятся сообщения.</p>
+            <div class="chat-header-actions">
+              <button type="button" class="btn-secondary btn-chat-remove" id="removeFriendBtn" disabled>
+                <ion-icon name="person-remove-outline"></ion-icon>
+                Удалить из друзей
+              </button>
             </div>
           </div>
+          <div id="friendSharedTasks" class="friend-shared-tasks d-none"></div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-placeholder"><p>Здесь появятся сообщения.</p></div>
+          </div>
           <form class="chat-input" id="chatForm">
-            <textarea id="chatMessageInput" placeholder="Напишите сообщение..." rows="2"></textarea>
-            <button type="submit" class="btn-primary" disabled id="sendChatBtn">Отправить</button>
+            <button type="button" class="btn-icon-only" id="chatAttachBtn" title="Прикрепить"><ion-icon name="attach-outline"></ion-icon></button>
+            <textarea id="chatMessageInput" placeholder="Сообщение..." rows="1"></textarea>
+            <button type="submit" class="btn-primary btn-icon-only" disabled id="sendChatBtn" title="Отправить">
+              <ion-icon name="send-outline"></ion-icon>
+            </button>
           </form>
         </main>
 
-        <aside class="friends-requests">
+        <aside class="friends-requests" data-friends-panel="requests">
           <div class="friends-section">
-            <h3>Входящие заявки</h3>
+            <h3>Входящие</h3>
             <div id="incomingRequests" class="requests-list empty-state-sm">
               <p>Нет входящих заявок.</p>
             </div>
           </div>
           <div class="friends-section">
-            <h3>Исходящие заявки</h3>
+            <h3>Исходящие</h3>
             <div id="outgoingRequests" class="requests-list empty-state-sm">
               <p>Нет исходящих заявок.</p>
             </div>
@@ -136,37 +155,68 @@
     </div>
   </div>
 
+  <div class="modal fade" id="groupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern">
+      <div class="modal-content-modern">
+        <div class="modal-header-modern">
+          <div class="modal-header-content">
+            <h5 class="modal-title-modern">Новая беседа</h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+          </div>
+        </div>
+        <form id="groupForm">
+          <div class="modal-body-modern">
+            <div class="form-group-modern">
+              <label class="form-label-modern">Название</label>
+              <input type="text" class="form-input-modern" id="groupName" required placeholder="Например: Команда проекта">
+            </div>
+            <div class="form-group-modern">
+              <label class="form-label-modern">Участники</label>
+              <select class="form-input-modern multiselect" id="groupMembers" multiple required></select>
+              <p class="form-hint">Только друзья. Удерживайте Ctrl/Command для выбора нескольких.</p>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+            <button type="submit" class="btn-submit"><span>Создать</span></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-modern">
       <div class="modal-content-modern">
         <div class="modal-header-modern">
           <div class="modal-header-content">
-            <h5 class="modal-title-modern">
-              Подтвердите выход
-            </h5>
-            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
-              <span>&times;</span>
-            </button>
+            <h5 class="modal-title-modern">Подтвердите выход</h5>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close"><span>&times;</span></button>
           </div>
         </div>
-        <div class="modal-body-modern">
-          <p>Вы действительно хотите выйти из аккаунта?</p>
-        </div>
+        <div class="modal-body-modern"><p>Вы действительно хотите выйти из аккаунта?</p></div>
         <div class="modal-actions">
           <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn-submit" id="confirmLogoutBtn">
-            <span>Выйти</span>
-            <span class="btn-arrow">→</span>
-          </button>
+          <button type="button" class="btn-submit" id="confirmLogoutBtn"><span>Выйти</span><span class="btn-arrow">→</span></button>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="scripts/consent.js"></script>
+  <script src="scripts/pwa.js"></script>
   <script src="scripts/theme.js"></script>
   <script src="scripts/notifications.js"></script>
+  <script src="scripts/api.js"></script>
+  <script src="scripts/shared-ui.js"></script>
   <script src="scripts/auth.js"></script>
+  <script src="scripts/notification-settings.js"></script>
+  <script src="scripts/unread-messages.js"></script>
+  <script src="scripts/push-notifications.js"></script>
+  <script src="scripts/message-notifications.js"></script>
+  <script src="scripts/notification-center.js"></script>
+  <script src="scripts/attachments.js"></script>
   <script src="scripts/friends.js"></script>
 </body>
 </html>

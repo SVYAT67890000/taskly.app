@@ -1,14 +1,14 @@
-// Управление календарем задач
+
 
 let currentDate = new Date();
 let calendarContainer;
 let currentMonthYearEl;
-let calendarTasks = []; // Переименовано, чтобы избежать конфликта с tasks.js
+let calendarTasks = []; 
 let calendarControlsInitialized = false;
 
-// Инициализация при загрузке
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Инициализируем календарь только на странице calendar.html
+  
   if (!window.location.pathname.includes('calendar.html')) {
     return;
   }
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentMonthYearEl: !!currentMonthYearEl
   });
   
-  // Настраиваем элементы календаря
+  
   if (calendarContainer && currentMonthYearEl) {
     setupCalendarControls();
     loadTasksForCalendar();
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Обновляем календарь при изменении задач
+  
   if (typeof window.renderTasks === 'function') {
     const originalRenderTasks = window.renderTasks;
     window.renderTasks = function() {
@@ -50,9 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// Настройка элементов управления календарем
+
 function setupCalendarControls() {
-  // Защита от повторной инициализации
+  
   if (calendarControlsInitialized) return;
   
   const prevBtn = document.getElementById('prevMonth');
@@ -83,7 +83,7 @@ function setupCalendarControls() {
   calendarControlsInitialized = true;
 }
 
-// Загрузка задач для календаря
+
 function loadTasksForCalendar() {
   if (typeof getUserTasks === 'function') {
     calendarTasks = getUserTasks();
@@ -94,7 +94,7 @@ function loadTasksForCalendar() {
       try {
         const allTasks = JSON.parse(saved);
         console.log('Все задачи из localStorage:', allTasks.length);
-        // Фильтруем задачи по текущему пользователю, если есть авторизация
+        
         if (typeof getCurrentUser === 'function') {
           const currentUser = getCurrentUser();
           if (currentUser) {
@@ -124,13 +124,13 @@ function loadTasksForCalendar() {
     calendarTasks = calendarTasks.filter(task => task.projectId === projectFilter);
   }
   
-  // Выводим примеры задач для отладки
+  
   if (calendarTasks.length > 0) {
     console.log('Примеры задач:', calendarTasks.slice(0, 3).map(t => ({ id: t.id, title: t.title, date: t.date })));
   }
 }
 
-// Отрисовка календаря
+
 function renderCalendar() {
   if (!calendarContainer || !currentMonthYearEl) {
     console.error('renderCalendar: элементы не найдены');
@@ -142,43 +142,43 @@ function renderCalendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   
-  // Обновляем заголовок месяца
+  
   const monthNames = [
     'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
   ];
   currentMonthYearEl.textContent = `${monthNames[month]} ${year}`;
   
-  // Получаем первый день месяца и количество дней
+  
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
   const startingDayOfWeek = firstDay.getDay();
-  // Корректируем день недели (воскресенье = 0, но нам нужно чтобы понедельник был первым)
+  
   const adjustedStartingDay = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1;
   
-  // Названия дней недели
+  
   const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
   
-  // Создаем HTML для календаря
+  
   let calendarHTML = '<div class="calendar-grid">';
   
-  // Заголовки дней недели
+  
   calendarHTML += '<div class="calendar-weekdays">';
   dayNames.forEach(day => {
     calendarHTML += `<div class="calendar-weekday">${day}</div>`;
   });
   calendarHTML += '</div>';
   
-  // Ячейки календаря
+  
   calendarHTML += '<div class="calendar-days">';
   
-  // Пустые ячейки до первого дня месяца
+  
   for (let i = 0; i < adjustedStartingDay; i++) {
     calendarHTML += '<div class="calendar-day empty"></div>';
   }
   
-  // Дни месяца
+  
   const today = new Date();
   const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
   
@@ -219,7 +219,7 @@ function renderCalendar() {
     return;
   }
   
-  // Добавляем обработчики кликов на задачи
+  
   const taskElements = calendarContainer.querySelectorAll('.calendar-task');
   taskElements.forEach(taskEl => {
     taskEl.addEventListener('click', (e) => {
@@ -231,7 +231,7 @@ function renderCalendar() {
     });
   });
   
-  // Добавляем обработчики кликов на дни
+  
   const dayElements = calendarContainer.querySelectorAll('.calendar-day:not(.empty)');
   dayElements.forEach(dayEl => {
     dayEl.addEventListener('click', () => {
@@ -243,16 +243,16 @@ function renderCalendar() {
   });
 }
 
-// Получение задач для конкретной даты
+
 function getTasksForDate(dateStr) {
   const matchingTasks = calendarTasks.filter(task => {
     if (!task.date) return false;
     
-    // Нормализуем даты для сравнения
+    
     const taskDate = new Date(task.date);
     const compareDate = new Date(dateStr);
     
-    // Сравниваем только дату (без времени)
+    
     return taskDate.getFullYear() === compareDate.getFullYear() &&
            taskDate.getMonth() === compareDate.getMonth() &&
            taskDate.getDate() === compareDate.getDate();
@@ -261,18 +261,18 @@ function getTasksForDate(dateStr) {
   return matchingTasks;
 }
 
-// Показ задач дня
+
 function showDayTasks(dateStr, dayElement) {
   const dayTasks = getTasksForDate(dateStr);
   
-  // Удаляем существующее модальное окно дня
+  
   const existingModal = document.getElementById('dayTasksModal');
   if (existingModal) {
     existingModal.remove();
   }
   
   if (dayTasks.length === 0) {
-    // Если задач нет, открываем модальное окно создания задачи с предзаполненной датой
+    
     const addTaskModal = document.getElementById('addTaskModal');
     if (addTaskModal && typeof bootstrap !== 'undefined') {
       const dateInput = document.getElementById('taskDate');
@@ -285,7 +285,7 @@ function showDayTasks(dateStr, dayElement) {
     return;
   }
   
-  // Создаем модальное окно для задач дня
+  
   const modalHTML = `
     <div class="modal fade" id="dayTasksModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-modern">
@@ -319,7 +319,10 @@ function showDayTasks(dateStr, dayElement) {
   
   document.body.insertAdjacentHTML('beforeend', modalHTML);
   
-  // Предзаполняем дату в форме добавления задачи
+  
+  bindDayTaskModalActions();
+  
+  
   const addTaskBtn = document.querySelector('#dayTasksModal .btn-submit');
   if (addTaskBtn) {
     addTaskBtn.addEventListener('click', () => {
@@ -330,25 +333,56 @@ function showDayTasks(dateStr, dayElement) {
     });
   }
   
-  // Открываем модальное окно
+  
   const modalElement = document.getElementById('dayTasksModal');
   if (modalElement && typeof bootstrap !== 'undefined') {
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
     
-    // Удаляем модальное окно после закрытия
+    
     modalElement.addEventListener('hidden.bs.modal', () => {
       modalElement.remove();
     });
   }
 }
 
-// Создание элемента задачи для модального окна дня
+
+function bindDayTaskModalActions() {
+  const modal = document.getElementById('dayTasksModal');
+  if (!modal) return;
+
+  modal.querySelectorAll('[data-action="edit"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const taskId = btn.dataset.taskId;
+      if (typeof window.editTask === 'function') window.editTask(taskId);
+      if (typeof bootstrap !== 'undefined') {
+        bootstrap.Modal.getInstance(modal)?.hide();
+      }
+    });
+  });
+
+  modal.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const taskId = btn.dataset.taskId;
+      const task = typeof findTaskById === 'function' ? findTaskById(taskId) : null;
+      if (typeof confirmDeleteTask === 'function') {
+        confirmDeleteTask(taskId, task?.title);
+      } else if (typeof window.deleteTask === 'function') {
+        window.deleteTask(taskId);
+      }
+      if (typeof bootstrap !== 'undefined') {
+        bootstrap.Modal.getInstance(modal)?.hide();
+      }
+    });
+  });
+}
+
+
 function createDayTaskItem(task) {
-  const priorityEmoji = {
-    low: '🟢',
-    medium: '🟡',
-    high: '🔴'
+  const priorityClass = {
+    low: 'priority-dot-low',
+    medium: 'priority-dot-medium',
+    high: 'priority-dot-high'
   };
   
   const statusText = task.status === 'completed' ? 'Выполнена' : 'Активна';
@@ -359,22 +393,26 @@ function createDayTaskItem(task) {
       <div class="day-task-header">
         <h4 class="day-task-title ${statusClass}">${escapeHtml(task.title)}</h4>
         <div class="day-task-priority">
-          ${priorityEmoji[task.priority] || '🟡'}
+          <span class="priority-dot ${priorityClass[task.priority] || 'priority-dot-medium'}"></span>
         </div>
       </div>
       ${task.description ? `<p class="day-task-description ${statusClass}">${escapeHtml(task.description)}</p>` : ''}
       <div class="day-task-footer">
         <span class="day-task-status">${statusText}</span>
         <div class="day-task-actions">
-          <button class="day-task-btn" onclick="window.editTask('${task.id}'); bootstrap.Modal.getInstance(document.getElementById('dayTasksModal')).hide();" title="Редактировать">✏️</button>
-          <button class="day-task-btn" onclick="if(confirm('Удалить задачу?')) { window.deleteTask('${task.id}'); bootstrap.Modal.getInstance(document.getElementById('dayTasksModal')).hide(); }" title="Удалить">🗑️</button>
+          <button type="button" class="day-task-btn" data-action="edit" data-task-id="${task.id}" title="Редактировать">
+            <ion-icon name="create-outline"></ion-icon>
+          </button>
+          <button type="button" class="day-task-btn" data-action="delete" data-task-id="${task.id}" title="Удалить">
+            <ion-icon name="trash-outline"></ion-icon>
+          </button>
         </div>
       </div>
     </div>
   `;
 }
 
-// Форматирование даты
+
 function formatDate(dateStr) {
   const date = new Date(dateStr);
   const day = date.getDate();
@@ -387,14 +425,14 @@ function formatDate(dateStr) {
   return `${day} ${month} ${year}`;
 }
 
-// Экранирование HTML
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-// Экспорт функций
+
 window.loadTasksForCalendar = loadTasksForCalendar;
 window.renderCalendar = renderCalendar;
 

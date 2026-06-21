@@ -2,6 +2,8 @@ let profileUser = null;
 let selectedAvatar = null;
 let cropperInstance = null;
 let cropperModal = null;
+let deleteAccountModal = null;
+let pendingDeleteCredentials = null;
 const emojiOptions = ['😀','😎','😊','🤩','🥳','😺','🐱','🐶','🐼','🦊','🐨','🐯','🐸','🦄','🌈','🌟','⚡️','🔥','🎯','🚀'];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,8 +17,61 @@ document.addEventListener('DOMContentLoaded', () => {
   populateProfileForm();
   setupProfileForm();
   setupPasswordForm();
+  setupDeleteAccountForm();
   updateStatusBadge();
+  renderProfileIds();
+  loadAchievements();
+  setupCopyButtons();
 });
+
+function renderProfileIds() {
+  const tagEl = document.getElementById('profileTag');
+  const publicEl = document.getElementById('profilePublicId');
+  if (tagEl) tagEl.textContent = profileUser.tag || `${profileUser.username}#${profileUser.discriminator || '????'}`;
+  if (publicEl) publicEl.textContent = profileUser.publicId || '—';
+}
+
+function setupCopyButtons() {
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-copy');
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent).then(() => {
+        showNotification?.('Скопировано', { type: 'success' });
+      });
+    });
+  });
+}
+
+async function loadAchievements() {
+  const grid = document.getElementById('achievementsGrid');
+  if (!grid) return;
+  try {
+    const { achievements } = await TasklyApi.getAchievements();
+    grid.innerHTML = achievements.map(a => `
+      <div class="achievement-card ${a.unlocked ? 'unlocked' : 'locked'}">
+        <span class="achievement-icon"><ion-icon name="${getAchievementIcon(a.id)}"></ion-icon></span>
+        <div class="achievement-info">
+          <strong>${a.title}</strong>
+          <p>${a.description}</p>
+          ${a.unlocked ? `<small>${new Date(a.unlockedAt).toLocaleDateString('ru-RU')}</small>` : '<small>Заблокировано</small>'}
+        </div>
+      </div>
+    `).join('');
+  } catch (_) {
+    const cached = localStorage.getItem('achievements');
+    if (cached) {
+      const achievements = JSON.parse(cached);
+      grid.innerHTML = achievements.map(a => `
+        <div class="achievement-card ${a.unlocked ? 'unlocked' : 'locked'}">
+          <span class="achievement-icon"><ion-icon name="${getAchievementIcon(a.id)}"></ion-icon></span>
+          <div class="achievement-info"><strong>${a.title}</strong><p>${a.description}</p></div>
+        </div>
+      `).join('');
+    }
+  }
+}
 
 function initAvatarSection() {
   updateAvatarPreview(selectedAvatar);
@@ -54,6 +109,8 @@ function updateAvatarPreview(avatar) {
     previewEl.classList.add('has-image');
     previewEl.textContent = '';
     previewEl.style.backgroundImage = `url(${avatar.value})`;
+    previewEl.style.backgroundSize = 'cover';
+    previewEl.style.backgroundPosition = 'center';
   } else {
     previewEl.classList.remove('has-image');
     previewEl.style.backgroundImage = '';
@@ -96,8 +153,8 @@ function handleAvatarFileChange(event) {
     setTimeout(() => {
       cropperInstance = new Cropper(imageEl, {
         aspectRatio: 1,
-        viewMode: 2,
-        autoCropArea: 1,
+        viewMode: 1,
+        autoCropArea: 0.95,
         responsive: true,
         background: false
       });
@@ -180,12 +237,15 @@ function setupProfileForm() {
 function setupPasswordForm() {
   const sendCodeBtn = document.getElementById('sendCodeBtn');
   if (sendCodeBtn) {
-    sendCodeBtn.addEventListener('click', () => {
-      const code = requestPasswordCode();
-      if (code) {
-        showNotification?.(`Код подтверждения отправлен на email. (Демо: ${code})`);
-      } else {
-        alert('Не удалось отправить код');
+    sendCodeBtn.addEventListener('click', async () => {
+      sendCodeBtn.disabled = true;
+      try {
+        const data = await TasklyApi.requestPasswordCode();
+        showNotification?.(data.message || 'Код отправлен на ваш email', { type: 'success' });
+      } catch (e) {
+        showAppError?.('Ошибка', e.message || 'Не удалось отправить код');
+      } finally {
+        sendCodeBtn.disabled = false;
       }
     });
   }
@@ -193,34 +253,91 @@ function setupPasswordForm() {
   const passwordForm = document.getElementById('passwordForm');
   if (!passwordForm) return;
   
-  passwordForm.addEventListener('submit', (e) => {
+  passwordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const code = document.getElementById('passwordCode')?.value.trim();
     const newPassword = document.getElementById('newPassword')?.value;
     const confirmPassword = document.getElementById('confirmPassword')?.value;
     
-    if (!code || !verifyPasswordCode(code)) {
-      showNotification?.('Неверный или просроченный код.', { type: 'warning' });
+    if (!code) {
+      showAppError?.('Код не введён', 'Введите код из письма.');
       return;
     }
-    
-    if (!newPassword || newPassword.length < 6) {
-      showNotification?.('Пароль должен содержать минимум 6 символов.', { type: 'warning' });
+    const pwdErr = validatePassword?.(newPassword);
+    if (pwdErr) {
+      showAppError?.('Пароль', pwdErr);
       return;
     }
-    
     if (newPassword !== confirmPassword) {
-      showNotification?.('Пароли не совпадают.', { type: 'warning' });
+      showAppError?.('Пароли не совпадают', 'Повторите пароль так же, как в первом поле.');
       return;
     }
     
-    const success = updateUserPassword(newPassword);
+    const success = await updateUserPassword(code, newPassword);
     if (success) {
       passwordForm.reset();
-      showNotification?.('Пароль обновлён!');
-    } else {
-      alert('Не удалось изменить пароль');
+      showNotification?.('Пароль обновлён!', { type: 'success' });
     }
+  });
+}
+
+function setupDeleteAccountForm() {
+  const form = document.getElementById('deleteAccountForm');
+  const modalEl = document.getElementById('deleteAccountModal');
+  if (!form || !modalEl) return;
+
+  deleteAccountModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const emailInput = document.getElementById('deleteAccountEmail');
+  if (emailInput && profileUser?.email) {
+    emailInput.value = profileUser.email;
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('deleteAccountEmail')?.value.trim();
+    const password = document.getElementById('deleteAccountPassword')?.value;
+
+    if (!email || !validateEmail?.(email)) {
+      showAppError?.('Email', 'Введите корректный email аккаунта.');
+      return;
+    }
+    if (email.toLowerCase() !== String(profileUser?.email || '').toLowerCase()) {
+      showAppError?.('Email', 'Email не совпадает с вашим аккаунтом.');
+      return;
+    }
+    const pwdErr = validatePassword?.(password);
+    if (pwdErr) {
+      showAppError?.('Пароль', pwdErr);
+      return;
+    }
+
+    pendingDeleteCredentials = { email, password };
+    deleteAccountModal.show();
+  });
+
+  document.getElementById('confirmDeleteAccountBtn')?.addEventListener('click', async () => {
+    if (!pendingDeleteCredentials) return;
+    const btn = document.getElementById('confirmDeleteAccountBtn');
+    if (btn) btn.disabled = true;
+
+    try {
+      await TasklyApi.deleteAccount(pendingDeleteCredentials.email, pendingDeleteCredentials.password);
+      deleteAccountModal.hide();
+      localStorage.removeItem('userToken');
+      localStorage.removeItem('currentUser');
+      sessionStorage.removeItem('userToken');
+      sessionStorage.removeItem('currentUser');
+      window.location.href = 'login.html';
+    } catch (e) {
+      showAppError?.('Не удалось удалить аккаунт', e.message || 'Проверьте email и пароль.');
+    } finally {
+      if (btn) btn.disabled = false;
+      pendingDeleteCredentials = null;
+    }
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    pendingDeleteCredentials = null;
   });
 }
 

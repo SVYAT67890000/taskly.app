@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="application-name" content="Таскли">
+  <meta name="apple-mobile-web-app-title" content="Таскли">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+  <title>Статистика — Таскли</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/design-light.css">
+  <link rel="stylesheet" href="styles/pwa.css">
+  <link rel="stylesheet" href="styles/mobile.css">
+  <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+</head>
+<body>
+  <nav class="navbar-modern">
+    <div class="container">
+      <div class="navbar-content">
+        <a class="navbar-brand-modern" href="index.html">
+          <img src="assets/logo.svg" alt="" class="brand-logo" width="28" height="28">
+          <span class="brand-text">Таскли</span>
+        </a>
+        <div class="navbar-right">
+          <button class="theme-toggle-btn-header btn-icon-only" id="themeToggle" title="Переключить тему">
+            <span class="theme-icon-header"><ion-icon name="moon-outline"></ion-icon></span>
+          </button>
+          <div class="user-menu-container">
+            <button class="user-menu-btn" id="userMenuBtn" type="button">
+              <span class="user-avatar" id="userAvatar"></span>
+              <span class="user-name" id="userName">Пользователь</span>
+              <span class="menu-arrow">▼</span>
+            </button>
+            <div class="user-menu-dropdown" id="userMenuDropdown">
+              <div class="user-menu-header">
+                <div class="user-menu-avatar" id="menuUserAvatar"></div>
+                <div class="user-menu-info">
+                  <div class="user-menu-username" id="menuUserName">Пользователь</div>
+                  <div class="user-menu-email" id="menuUserEmail"></div>
+                </div>
+              </div>
+              <div class="user-menu-divider"></div>
+              <ul class="user-menu-list">
+                <li class="user-menu-item"><a href="profile.html" class="user-menu-link"><span class="menu-link-text">Профиль</span></a></li>
+                <li class="user-menu-item"><a href="friends.html" class="user-menu-link"><span class="menu-link-text">Друзья</span></a></li>
+                <li class="user-menu-item"><a href="index.html" class="user-menu-link"><span class="menu-link-text">Мои задачи</span></a></li>
+                <li class="user-menu-item"><a href="calendar.html" class="user-menu-link"><span class="menu-link-text">Календарь</span></a></li>
+                <li class="user-menu-item"><a href="stats.html" class="user-menu-link active"><span class="menu-link-text">Статистика</span></a></li>
+                <li class="user-menu-item"><a href="support.html" class="user-menu-link"><span class="menu-link-text">Поддержка</span></a></li>
+                <li class="user-menu-item"><a href="#" class="user-menu-link" id="menuLogoutBtn"><span class="menu-link-text">Выйти</span></a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="stats-page container">
+    <header class="stats-header">
+      <h1>Статистика</h1>
+      <p>Графики по задачам, проектам и продуктивности</p>
+    </header>
+
+    <div class="page-tabs" data-page-tabs>
+      <button type="button" class="page-tab active" data-page-tab="overview">Обзор</button>
+      <button type="button" class="page-tab" data-page-tab="dynamics">Динамика</button>
+      <button type="button" class="page-tab" data-page-tab="projects">Проекты</button>
+    </div>
+
+    <div class="page-panel active" data-page-panel="overview">
+      <div class="stats-quote" id="statsQuote"></div>
+      <div class="stats-summary" id="statsSummary"></div>
+      <div class="stats-insights" id="statsInsights"></div>
+    </div>
+
+    <div class="page-panel" data-page-panel="dynamics">
+      <div class="stats-grid">
+        <section class="stats-card"><h2>Выполненные задачи по дням</h2><canvas id="chartCompletedByDay"></canvas></section>
+        <section class="stats-card"><h2>Статусы задач</h2><canvas id="chartByStatus"></canvas></section>
+        <section class="stats-card stats-card-wide"><h2>Приоритеты</h2><canvas id="chartByPriority"></canvas></section>
+      </div>
+    </div>
+
+    <div class="page-panel" data-page-panel="projects">
+      <div class="stats-grid">
+        <section class="stats-card stats-card-wide"><h2>Прогресс по проектам</h2><canvas id="chartProjects"></canvas></section>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="scripts/consent.js"></script>
+  <script src="scripts/pwa.js"></script>
+  <script src="scripts/theme.js"></script>
+  <script src="scripts/notifications.js"></script>
+  <script src="scripts/api.js"></script>
+  <script src="scripts/shared-ui.js"></script>
+  <script src="scripts/auth.js"></script>
+  <script src="scripts/notification-settings.js"></script>
+  <script src="scripts/unread-messages.js"></script>
+  <script src="scripts/message-notifications.js"></script>
+  <script src="scripts/notification-center.js"></script>
+  <script src="scripts/page-tabs.js"></script>
+  <script src="scripts/stats.js"></script>
+</body>
+</html>
