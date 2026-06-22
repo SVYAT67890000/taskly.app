@@ -14,9 +14,6 @@ npm install
 npm start
 ```
 
-Сайт: http://localhost:3000  
-API: http://localhost:3000/api
-
 ## Возможности
 
 - **Аккаунт** — при регистрации выдаётся тег `имя#1234` и личный ID `TL-XXXXXX`
