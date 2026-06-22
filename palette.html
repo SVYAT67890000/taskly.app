@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Цветовая палитра Таскли</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #f0f0f0; display: flex; justify-content: center; padding: 40px; }
+  .container { max-width: 800px; width: 100%; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #1a1a1a; }
+  .subtitle { font-size: 14px; color: #6c757d; margin-bottom: 32px; }
+  .section { margin-bottom: 36px; }
+  .section-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #6366f1; display: inline-block; }
+  .swatch-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .swatch { width: 100px; text-align: center; }
+  .swatch-color { width: 100px; height: 100px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); margin-bottom: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .swatch-name { font-size: 11px; font-weight: 600; color: #333; }
+  .swatch-hex { font-size: 10px; color: #888; font-family: monospace; }
+  .two-columns { display: flex; gap: 24px; }
+  .column { flex: 1; }
+  .theme-header { font-size: 14px; font-weight: 600; margin-bottom: 12px; padding: 6px 12px; border-radius: 8px; display: inline-block; }
+  .theme-light-header { background: #e8e8e8; color: #333; }
+  .theme-dark-header { background: #1a1f2e; color: #e4e6eb; }
+  .row-labels { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .label { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; color: #fff; }
+  .label-accent { background: #6366f1; }
+  .label-green { background: #10b981; }
+  .label-yellow { background: #f59e0b; color: #333; }
+  .label-red { background: #ef4444; }
+  .label-gray { background: #6c757d; }
+  .gradient-bar { height: 48px; border-radius: 10px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Цветовая палитра</h1>
+  <p class="subtitle">Веб-приложение «Таскли» — светлая и тёмная темы</p>
+
+  <!-- Акцентный цвет -->
+  <div class="section">
+    <div class="section-title">Акцентный цвет</div>
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#6366f1;"></div>
+        <div class="swatch-name">Accent</div>
+        <div class="swatch-hex">#6366f1</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#4f46e5;"></div>
+        <div class="swatch-name">Accent Hover</div>
+        <div class="swatch-hex">#4f46e5</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:rgba(99,102,241,0.1);"></div>
+        <div class="swatch-name">Accent Soft</div>
+        <div class="swatch-hex">rgba(99,102,241,0.1)</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#7c8ef5;"></div>
+        <div class="swatch-name">Accent Dark</div>
+        <div class="swatch-hex">#7c8ef5</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Светлая тема -->
+  <div class="section">
+    <div class="section-title">Светлая тема</div>
+    <div class="two-columns">
+      <div class="column">
+        <div class="theme-header theme-light-header">Фоны</div>
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#f8f9fa; border-color:#ddd;"></div>
+            <div class="swatch-name">Страница</div>
+            <div class="swatch-hex">#f8f9fa</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#ffffff; border-color:#ddd;"></div>
+            <div class="swatch-name">Карточка</div>
+            <div class="swatch-hex">#ffffff</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#e9ecef;"></div>
+            <div class="swatch-name">Границы</div>
+            <div class="swatch-hex">#e9ecef</div>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <div class="theme-header theme-light-header">Текст</div>
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#1a1a1a;"></div>
+            <div class="swatch-name">Основной</div>
+            <div class="swatch-hex">#1a1a1a</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#6c757d;"></div>
+            <div class="swatch-name">Второстеп.</div>
+            <div class="swatch-hex">#6c757d</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#adb5bd;"></div>
+            <div class="swatch-name">Метки</div>
+            <div class="swatch-hex">#adb5bd</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Тёмная тема -->
+  <div class="section">
+    <div class="section-title">Тёмная тема</div>
+    <div class="two-columns">
+      <div class="column">
+        <div class="theme-header theme-dark-header">Фоны</div>
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#0f1419;"></div>
+            <div class="swatch-name">Страница</div>
+            <div class="swatch-hex">#0f1419</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#1e2332;"></div>
+            <div class="swatch-name">Карточка</div>
+            <div class="swatch-hex">#1e2332</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#2d3441;"></div>
+            <div class="swatch-name">Границы</div>
+            <div class="swatch-hex">#2d3441</div>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <div class="theme-header theme-dark-header">Текст</div>
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#e4e6eb;"></div>
+            <div class="swatch-name">Основной</div>
+            <div class="swatch-hex">#e4e6eb</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#b0b3b8;"></div>
+            <div class="swatch-name">Второстеп.</div>
+            <div class="swatch-hex">#b0b3b8</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#8a8d91;"></div>
+            <div class="swatch-name">Метки</div>
+            <div class="swatch-hex">#8a8d91</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Семантические цвета -->
+  <div class="section">
+    <div class="section-title">Приоритеты задач</div>
+    <div class="two-columns">
+      <div class="column">
+        <div class="theme-header theme-light-header">Светлая тема</div>
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#10b981;"></div>
+            <div class="swatch-name">Низкий</div>
+            <div class="swatch-hex">#10b981</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#f59e0b;"></div>
+            <div class="swatch-name">Средний</div>
+            <div class="swatch-hex">#f59e0b</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#ef4444;"></div>
+            <div class="swatch-name">Высокий</div>
+            <div class="swatch-hex">#ef4444</div>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <div class="theme-header theme-dark-header">Тёмная тема</div>
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#34d399;"></div>
+            <div class="swatch-name">Низкий</div>
+            <div class="swatch-hex">#34d399</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#fbbf24;"></div>
+            <div class="swatch-name">Средний</div>
+            <div class="swatch-hex">#fbbf24</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#f87171;"></div>
+            <div class="swatch-name">Высокий</div>
+            <div class="swatch-hex">#f87171</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Цвета заметок -->
+  <div class="section">
+    <div class="section-title">Цветовая маркировка заметок</div>
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#fff9c4;"></div>
+        <div class="swatch-name">Жёлтый</div>
+        <div class="swatch-hex">#fff9c4</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#c8e6c9;"></div>
+        <div class="swatch-name">Зелёный</div>
+        <div class="swatch-hex">#c8e6c9</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#bbdefb;"></div>
+        <div class="swatch-name">Голубой</div>
+        <div class="swatch-hex">#bbdefb</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#f8bbd0;"></div>
+        <div class="swatch-name">Розовый</div>
+        <div class="swatch-hex">#f8bbd0</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#e1bee7;"></div>
+        <div class="swatch-name">Фиолет.</div>
+        <div class="swatch-hex">#e1bee7</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#ffe0b2;"></div>
+        <div class="swatch-name">Оранж.</div>
+        <div class="swatch-hex">#ffe0b2</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Градиенты -->
+  <div class="section">
+    <div class="section-title">Градиенты</div>
+    <div class="two-columns">
+      <div class="column">
+        <div class="theme-header theme-light-header">Светлая тема</div>
+        <div class="gradient-bar" style="background:linear-gradient(135deg, #667eea, #764ba2);"></div>
+        <div style="font-size:11px;color:#666;margin-bottom:8px;">Основной: #667eea → #764ba2</div>
+        <div class="gradient-bar" style="background:linear-gradient(135deg, #f093fb, #f5576c);"></div>
+        <div style="font-size:11px;color:#666;margin-bottom:8px;">Вторичный: #f093fb → #f5576c</div>
+        <div class="gradient-bar" style="background:linear-gradient(135deg, #4facfe, #00f2fe);"></div>
+        <div style="font-size:11px;color:#666;">Успех: #4facfe → #00f2fe</div>
+      </div>
+      <div class="column">
+        <div class="theme-header theme-dark-header">Тёмная тема</div>
+        <div class="gradient-bar" style="background:linear-gradient(135deg, #7c8ef5, #9b6fd8);"></div>
+        <div style="font-size:11px;color:#666;margin-bottom:8px;">Основной: #7c8ef5 → #9b6fd8</div>
+        <div class="gradient-bar" style="background:linear-gradient(135deg, #ff9fd4, #ff6b8a);"></div>
+        <div style="font-size:11px;color:#666;margin-bottom:8px;">Вторичный: #ff9fd4 → #ff6b8a</div>
+        <div class="gradient-bar" style="background:linear-gradient(135deg, #5fb3ff, #1ae5ff);"></div>
+        <div style="font-size:11px;color:#666;">Успех: #5fb3ff → #1ae5ff</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Бейджи -->
+  <div class="section">
+    <div class="section-title">Уведомления и бейджи</div>
+    <div class="row-labels">
+      <span class="label label-red">Бейдж #ef4444</span>
+      <span class="label label-green">Успех #10b981</span>
+      <span class="label label-yellow">Предупреждение #f59e0b</span>
+      <span class="label label-gray">Неактивно #6c757d</span>
+    </div>
+  </div>
+
+  <!-- Скругления -->
+  <div class="section">
+    <div class="section-title">Скругления углов</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:40px;height:40px;background:#6366f1;border-radius:8px;"></div>
+        <span style="font-size:12px;color:#666;">8px (кнопки)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:40px;height:40px;background:#6366f1;border-radius:12px;"></div>
+        <span style="font-size:12px;color:#666;">12px (карточки)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:40px;height:40px;background:#6366f1;border-radius:16px;"></div>
+        <span style="font-size:12px;color:#666;">16px (модалки)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:40px;height:40px;background:#6366f1;border-radius:24px;"></div>
+        <span style="font-size:12px;color:#666;">24px (планшеты)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Тени -->
+  <div class="section">
+    <div class="section-title">Тени</div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;">
+      <div style="width:80px;height:40px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.04);display:flex;align-items:center;justify-content:center;font-size:9px;color:#999;">sm</div>
+      <div style="width:80px;height:40px;background:#fff;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;font-size:9px;color:#999;">md</div>
+      <div style="width:80px;height:40px;background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.12);display:flex;align-items:center;justify-content:center;font-size:9px;color:#999;">lg</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

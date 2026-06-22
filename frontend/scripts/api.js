@@ -190,6 +190,24 @@ const TasklyApi = {
   async uploadFile(payload) {
     return apiFetch('/uploads', { method: 'POST', body: JSON.stringify(payload) });
   },
+  async deleteMessage(id) {
+    return apiFetch(`/messages/${id}`, { method: 'DELETE' });
+  },
+  async deleteConversationMessage(convId, msgId) {
+    return apiFetch(`/conversations/${convId}/messages/${msgId}`, { method: 'DELETE' });
+  },
+  async leaveConversation(convId) {
+    return apiFetch(`/conversations/${convId}/leave`, { method: 'POST' });
+  },
+  async deleteConversation(convId) {
+    return apiFetch(`/conversations/${convId}`, { method: 'DELETE' });
+  },
+  async editMessage(id, text) {
+    return apiFetch(`/messages/${id}`, { method: 'PUT', body: JSON.stringify({ text }) });
+  },
+  async editConversationMessage(convId, msgId, text) {
+    return apiFetch(`/conversations/${convId}/messages/${msgId}`, { method: 'PUT', body: JSON.stringify({ text }) });
+  },
   async getFriendSharedTasks(friendId) {
     return apiFetch(`/friends/${friendId}/shared-tasks`);
   },

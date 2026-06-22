@@ -1,0 +1,17 @@
+name = "tasklyapp"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = "frontend"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "taskly-db"
+database_id = "fbe1300d-e809-4523-a423-95852490d1fe"
+migrations_dir = "migrations"
+
+[vars]
+# ADMIN_EMAILS — set in Cloudflare Dashboard
+# SMTP_* — set in Cloudflare Dashboard
+# VAPID_PUBLIC_KEY — set in Cloudflare Dashboard
+# VAPID_PRIVATE_KEY — set in Cloudflare Dashboard

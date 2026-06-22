@@ -39,7 +39,7 @@ async function downloadAuthFile(url, name) {
 
 function isImageAttachment(a) {
   const mime = a.mimeType || '';
-  return mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(a.name || '');
+  return mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg|ico)$/i.test(a.name || '');
 }
 
 function renderAttachmentHtml(a, index) {
@@ -59,7 +59,7 @@ function escapeAttr(text) {
   return String(text || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
-async function pickFiles(accept = 'image/*,.pdf,.doc,.docx,.txt') {
+async function pickFiles(accept = 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar,.mp3,.wav,.mp4,.avi,.mov,.json,.md') {
   return new Promise(resolve => {
     const input = document.createElement('input');
     input.type = 'file';

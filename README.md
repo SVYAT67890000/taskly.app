@@ -30,23 +30,11 @@ API: http://localhost:3000/api
 
 ```
 taskly.app/
-<<<<<<< HEAD
 ├── data/              # SQLite
 ├── db/                # Схема и логика БД
 ├── server/api.js      # REST API
 ├── frontend/          # Клиент
 └── server.js
-=======
-├── frontend/          # Фронтенд приложения
-│   ├── index.html    # Главная страница
-│   ├── login.html    # Страница входа
-│   ├── register.html # Страница регистрации
-│   ├── scripts/      # JavaScript файлы
-│   ├── styles/       # CSS файлы
-│   └── assets/       # Изображения и другие ресурсы
-├── server.js         # Node.js сервер
-└── package.json      # Зависимости проекта
->>>>>>> a51184d3a47d0a0d361d07e61520345bc3dfe00c
 ```
 
 ## Технологии
@@ -63,6 +51,51 @@ Taskly поддерживает установку как Progressive Web App:
 3. На телефоне: «Добавить на главный экран» в меню браузера
 
 Файлы PWA: `manifest.json`, `sw.js` (офлайн-кэш статики, API всегда через сеть).
+
+## Деплой на Cloudflare Pages + D1
+
+На Cloudflare **не работает** локальный SQLite (`better-sqlite3`) и Node.js сервер (`server.js`).  
+API развёрнут как **Pages Functions** + база **Cloudflare D1**.
+
+### Первый деплой
+
+```bash
+npm install
+npm run db:migrate:remote    # создать таблицы в D1
+npm run deploy               # деплой frontend + functions
+```
+
+### Локальная проверка (как на Cloudflare)
+
+```bash
+npm run db:migrate:local
+npm run dev:pages
+```
+
+### Переменные в Cloudflare Dashboard
+
+Pages → **tasklyapp** → Settings → Environment variables:
+
+| Переменная | Назначение |
+|------------|------------|
+| `ADMIN_EMAILS` | Email админов через запятую (поддержка) |
+| `VAPID_PUBLIC_KEY` | Push-уведомления (опционально) |
+| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Письма с кодами (опционально) |
+
+D1 binding `DB` → `taskly-db` задаётся в `wrangler.toml`.
+
+### Структура (Cloudflare)
+
+```
+taskly.app/
+├── frontend/           # статика (HTML, JS, CSS)
+├── functions/api/      # Pages Functions → /api/*
+├── worker/             # Hono API + D1
+├── migrations/         # SQL-схема D1
+└── wrangler.toml
+```
+
+Локально по-прежнему: `npm start` (Express + SQLite в `data/taskly.db`).
 
 
 ```bash

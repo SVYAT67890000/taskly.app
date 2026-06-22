@@ -23,7 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
   friendsPollTimer = setInterval(() => {
     loadFriendsData();
     if (selectedFriendId || selectedGroupId) renderChatMessages();
-  }, 12000);
+  }, 8000);
+
+  window.addEventListener('focus', () => {
+    loadFriendsData();
+    if (selectedFriendId || selectedGroupId) renderChatMessages();
+  });
 });
 
 function initFromUrlParams() {
@@ -52,6 +57,104 @@ function bindEvents() {
   document.getElementById('removeFriendBtn')?.addEventListener('click', removeSelectedFriend);
   document.getElementById('chatBackBtn')?.addEventListener('click', () => setMobilePanel('friends'));
   document.getElementById('chatAttachBtn')?.addEventListener('click', attachToChat);
+  document.getElementById('chatMessages')?.addEventListener('click', handleChatMessageClick);
+  document.getElementById('leaveGroupBtn')?.addEventListener('click', handleLeaveGroup);
+  document.getElementById('deleteGroupBtn')?.addEventListener('click', handleDeleteGroup);
+  document.getElementById('chatMessageInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      document.getElementById('chatForm')?.requestSubmit();
+    }
+  });
+}
+
+async function handleChatMessageClick(e) {
+  const delBtn = e.target.closest('.chat-message-delete');
+  if (delBtn) {
+    if (!confirm('Удалить сообщение?')) return;
+    const msgId = delBtn.dataset.msgId;
+    const kind = delBtn.dataset.kind;
+    try {
+      if (kind === 'group') {
+        await TasklyApi.deleteConversationMessage(selectedGroupId, msgId);
+      } else {
+        await TasklyApi.deleteMessage(msgId);
+      }
+      renderChatMessages();
+    } catch (e) {
+      showNotification?.(e.message || 'Ошибка удаления', { type: 'warning' });
+    }
+    return;
+  }
+
+  const editBtn = e.target.closest('.chat-message-edit');
+  if (editBtn) {
+    const msgEl = editBtn.closest('.chat-message');
+    const textEl = msgEl?.querySelector('.chat-message-text');
+    if (!textEl) return;
+    const origText = textEl.textContent;
+    const input = document.createElement('textarea');
+    input.className = 'chat-edit-input';
+    input.value = origText;
+    input.rows = 1;
+    textEl.replaceWith(input);
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    const done = async () => {
+      const newText = input.value.trim();
+      if (!newText || newText === origText) {
+        input.replaceWith(textEl);
+        return;
+      }
+      try {
+        const msgId = editBtn.dataset.msgId;
+        const kind = editBtn.dataset.kind;
+        if (kind === 'group') {
+          await TasklyApi.editConversationMessage(selectedGroupId, msgId, newText);
+        } else {
+          await TasklyApi.editMessage(msgId, newText);
+        }
+        renderChatMessages();
+      } catch (err) {
+        showNotification?.(err.message || 'Ошибка редактирования', { type: 'warning' });
+        input.replaceWith(textEl);
+      }
+    };
+
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); done(); }
+      if (ev.key === 'Escape') { input.replaceWith(textEl); }
+    });
+    input.addEventListener('blur', done);
+    return;
+  }
+}
+
+async function handleLeaveGroup() {
+  if (!selectedGroupId) return;
+  if (!confirm('Покинуть беседу?')) return;
+  try {
+    await TasklyApi.leaveConversation(selectedGroupId);
+    selectedGroupId = null;
+    showNotification?.('Вы покинули беседу', { type: 'info' });
+    await loadFriendsData();
+  } catch (e) {
+    showNotification?.(e.message || 'Ошибка', { type: 'warning' });
+  }
+}
+
+async function handleDeleteGroup() {
+  if (!selectedGroupId) return;
+  if (!confirm('Удалить беседу навсегда? Это действие нельзя отменить.')) return;
+  try {
+    await TasklyApi.deleteConversation(selectedGroupId);
+    selectedGroupId = null;
+    showNotification?.('Беседа удалена', { type: 'info' });
+    await loadFriendsData();
+  } catch (e) {
+    showNotification?.(e.message || 'Ошибка', { type: 'warning' });
+  }
 }
 
 function setupMobilePanels() {
@@ -316,6 +419,11 @@ function updateChatHeader() {
     nameEl.textContent = conv?.name || 'Беседа';
     statusEl.textContent = conv ? `${(conv.memberIds || []).length} участников` : 'Групповой чат';
     removeBtn.disabled = true;
+    removeBtn.style.display = '';
+    const leaveBtn = document.getElementById('leaveGroupBtn');
+    const deleteBtn = document.getElementById('deleteGroupBtn');
+    if (leaveBtn) leaveBtn.style.display = '';
+    if (deleteBtn) deleteBtn.style.display = conv && conv.ownerId === currentUserData.id ? '' : 'none';
     sendBtn.disabled = !conv;
     chatInput.disabled = !conv;
     if (sharedBox) {
@@ -328,10 +436,16 @@ function updateChatHeader() {
     return;
   }
 
+  const leaveBtn = document.getElementById('leaveGroupBtn');
+  if (leaveBtn) leaveBtn.style.display = 'none';
+  const deleteBtn = document.getElementById('deleteGroupBtn');
+  if (deleteBtn) deleteBtn.style.display = 'none';
+
   if (!selectedFriendId || !friendsLookup[selectedFriendId]) {
     nameEl.textContent = 'Выберите собеседника';
     statusEl.textContent = 'Чтобы начать переписку, выберите друга.';
     removeBtn.disabled = true;
+    removeBtn.style.display = '';
     sendBtn.disabled = true;
     chatInput.disabled = true;
     chatInput.value = '';
@@ -343,6 +457,7 @@ function updateChatHeader() {
   nameEl.textContent = friend.username || friend.email;
   statusEl.textContent = friend.status || 'Онлайн';
   removeBtn.disabled = false;
+  removeBtn.style.display = '';
   sendBtn.disabled = false;
   chatInput.disabled = false;
   loadFriendSharedTasks(selectedFriendId);
@@ -391,11 +506,15 @@ async function renderChatMessages() {
         <div class="chat-message ${isMine ? 'mine' : ''}">
           ${sender}
           ${msg.text ? `<div class="chat-message-text">${escapeHtml(msg.text)}</div>` : ''}
-          <div class="chat-message-meta">${time}</div>
+          <div class="chat-message-meta">${time}
+            ${isMine ? `<button class="chat-message-edit" data-msg-id="${escapeAttr(msg.id)}" data-kind="group" title="Редактировать"><ion-icon name="pencil-outline"></ion-icon></button><button class="chat-message-delete" data-msg-id="${escapeAttr(msg.id)}" data-kind="group" title="Удалить"><ion-icon name="trash-outline"></ion-icon></button>` : ''}
+          </div>
         </div>
       `;
     }).join('');
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    if (messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 60) {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
     return;
   }
 
@@ -418,7 +537,7 @@ async function renderChatMessages() {
     return;
   }
 
-  messagesEl.innerHTML = messages.map(msg => {
+    messagesEl.innerHTML = messages.map(msg => {
     const isMine = msg.from === currentUserData.id;
     const time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const files = (msg.attachments || []).map(a => renderAttachmentHtml(a)).join('');
@@ -426,14 +545,18 @@ async function renderChatMessages() {
       <div class="chat-message ${isMine ? 'mine' : ''}">
         ${msg.text ? `<div class="chat-message-text">${escapeHtml(msg.text)}</div>` : ''}
         ${files ? `<div class="chat-attachments">${files}</div>` : ''}
-        <div class="chat-message-meta">${time}</div>
+        <div class="chat-message-meta">${time}
+          ${isMine ? `<button class="chat-message-edit" data-msg-id="${escapeAttr(msg.id)}" data-kind="dm" title="Редактировать"><ion-icon name="pencil-outline"></ion-icon></button><button class="chat-message-delete" data-msg-id="${escapeAttr(msg.id)}" data-kind="dm" title="Удалить"><ion-icon name="trash-outline"></ion-icon></button>` : ''}
+        </div>
       </div>
     `;
   }).join('');
 
   await hydrateAuthMedia(messagesEl);
 
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  if (messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 60) {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
 }
 
 async function handleSendRequest() {
@@ -530,6 +653,10 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function escapeAttr(text) {
+  return String(text || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 Object.defineProperty(window, 'selectedFriendId', {
   get() { return selectedFriendId; },
   set(v) { selectedFriendId = v; }
@@ -539,3 +666,5 @@ Object.defineProperty(window, 'selectedGroupId', {
   get() { return selectedGroupId; },
   set(v) { selectedGroupId = v; }
 });
+
+window.renderChatMessages = renderChatMessages;

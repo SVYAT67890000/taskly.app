@@ -56,6 +56,8 @@ function getUnreadKey(msg) {
   return msg.from;
 }
 
+let chatRefreshNeeded = false;
+
 function notifyIncomingMessage(msg) {
   if (seenMessageIds.has(msg.id)) return;
   seenMessageIds.add(msg.id);
@@ -63,9 +65,12 @@ function notifyIncomingMessage(msg) {
   if (typeof incrementUnread === 'function') incrementUnread(getUnreadKey(msg));
   if (typeof renderNotificationCenter === 'function') renderNotificationCenter();
 
-  if (!notificationsAllowed('messages')) return;
   const skipKey = msg.kind === 'group' ? msg.conversationId : msg.from;
-  if (shouldSkipMessageNotification(skipKey, msg.kind === 'group')) return;
+  const isViewing = shouldSkipMessageNotification(skipKey, msg.kind === 'group');
+  if (isViewing) chatRefreshNeeded = true;
+
+  if (!notificationsAllowed('messages')) return;
+  if (isViewing) return;
 
   const preview = msg.text.length > 100 ? `${msg.text.slice(0, 97)}...` : msg.text;
   const title = msg.kind === 'group'
@@ -124,6 +129,11 @@ async function pollMessageNotifications() {
     console.warn('Message poll:', err.message);
   }
 
+  if (chatRefreshNeeded) {
+    chatRefreshNeeded = false;
+    if (typeof window.renderChatMessages === 'function') window.renderChatMessages();
+  }
+
   try {
     const data = await TasklyApi.getFriends();
     const users = data.users || [];
@@ -140,7 +150,10 @@ function startMessageNotificationPoller() {
   if (messagePollTimer) return;
   loadMessagePollState();
   pollMessageNotifications();
-  messagePollTimer = setInterval(pollMessageNotifications, 8000);
+  messagePollTimer = setInterval(pollMessageNotifications, 4000);
+  window.addEventListener('focus', () => {
+    pollMessageNotifications();
+  });
 }
 
 function initMessageNotifications() {
@@ -151,6 +164,8 @@ function initMessageNotifications() {
   }
   startMessageNotificationPoller();
 }
+
+
 
 document.addEventListener('DOMContentLoaded', initMessageNotifications);
 

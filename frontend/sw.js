@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'taskly-v13';
+const CACHE_VERSION = 'taskly-v14';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -80,10 +80,12 @@ function isApiRequest(url) {
   return url.pathname.startsWith('/api');
 }
 
-function isStaticAsset(url) {
-  return /\.(css|js|png|jpg|jpeg|svg|webp|woff2?|html)$/i.test(url.pathname)
-    || url.pathname === '/'
-    || url.pathname.endsWith('.html');
+function isHtmlPage(url) {
+  return url.pathname === '/' || url.pathname.endsWith('.html');
+}
+
+function isOtherStatic(url) {
+  return /\.(css|js|png|jpg|jpeg|svg|webp|woff2?)$/i.test(url.pathname);
 }
 
 self.addEventListener('fetch', (event) => {
@@ -93,12 +95,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (isApiRequest(url)) {
+  if (isApiRequest(url) || isHtmlPage(url)) {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  if (isStaticAsset(url)) {
+  if (isOtherStatic(url)) {
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
