@@ -351,38 +351,39 @@ router.patch('/users/me', authMiddleware, async (req, res) => {
   const db = getDb();
   const { username, status, phone, bio, avatar, preferences } = req.body || {};
   const updates = [];
-  const params = { id: req.user.id };
+  const values = [];
 
   if (username !== undefined) {
-    updates.push('username = @username');
-    params.username = username;
+    updates.push('username = ?');
+    values.push(username);
   }
   if (status !== undefined) {
-    updates.push('status = @status');
-    params.status = status;
+    updates.push('status = ?');
+    values.push(status);
   }
   if (phone !== undefined) {
-    updates.push('phone = @phone');
-    params.phone = phone;
+    updates.push('phone = ?');
+    values.push(phone);
   }
   if (bio !== undefined) {
-    updates.push('bio = @bio');
-    params.bio = bio;
+    updates.push('bio = ?');
+    values.push(bio);
   }
   if (avatar !== undefined) {
-    updates.push('avatar_json = @avatar_json');
-    params.avatar_json = JSON.stringify(avatar);
+    updates.push('avatar_json = ?');
+    values.push(JSON.stringify(avatar));
   }
   if (preferences !== undefined) {
-    updates.push('preferences_json = @preferences_json');
-    params.preferences_json = JSON.stringify(preferences);
+    updates.push('preferences_json = ?');
+    values.push(JSON.stringify(preferences));
   }
 
   if (updates.length) {
-await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = @id`).run(params);
+    values.push(req.user.id);
+    await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
   }
 
-await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   const newAchievements = checkAndUnlock(req.user.id);
   res.json({ user: formatUser(row), newAchievements });
 });
@@ -524,23 +525,25 @@ router.patch('/support/tickets/:id', authMiddleware, async (req, res) => {
 
   const { status, adminReply } = req.body || {};
   const db = getDb();
-await db.prepare('SELECT * FROM support_tickets WHERE id = ?').get(req.params.id);
+  const ticket = await db.prepare('SELECT * FROM support_tickets WHERE id = ?').get(req.params.id);
   if (!ticket) return res.status(404).json({ error: 'Обращение не найдено' });
 
   const updates = [];
-  const params = { id: req.params.id, updated_at: new Date().toISOString() };
+  const values = [];
   if (status !== undefined) {
-    updates.push('status = @status');
-    params.status = String(status);
+    updates.push('status = ?');
+    values.push(String(status));
   }
   if (adminReply !== undefined) {
-    updates.push('admin_reply = @admin_reply');
-    params.admin_reply = String(adminReply);
+    updates.push('admin_reply = ?');
+    values.push(String(adminReply));
   }
-  updates.push('updated_at = @updated_at');
+  updates.push('updated_at = ?');
+  values.push(new Date().toISOString());
 
   if (updates.length > 1) {
-await db.prepare(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id = @id`).run(params);
+    values.push(req.params.id);
+    await db.prepare(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id = ?`).run(...values);
   }
 
   res.json({ ok: true });
@@ -583,7 +586,7 @@ await db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
 
 router.put('/tasks/:id', authMiddleware, async (req, res) => {
   const db = getDb();
-await db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+  const existing = await db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Задача не найдена' });
 
   const task = { ...rowToTask(existing), ...req.body };
