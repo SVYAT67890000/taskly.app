@@ -67,7 +67,7 @@ async function getUserTasksForReminders(userId) {
     LEFT JOIN project_members pm ON pm.project_id = t.project_id AND pm.user_id = ?
     WHERE t.status != 'completed'
       AND (t.owner_id = ? OR pm.user_id IS NOT NULL OR t.assignees_json LIKE ?)
-  `).all(userId, `%"${userId}"%`);
+  `).all(userId, userId, `%"${userId}"%`);
 }
 
 async function getUserLeadDays(userId) {

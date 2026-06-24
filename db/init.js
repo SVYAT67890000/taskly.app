@@ -11,6 +11,7 @@ function getDb() {
     if (!db) {
       const pg = require('./pg');
       db = pg.prepare;
+      db.prepare = pg.prepare;
       db._pool = pg.getPool();
       db._exec = pg.exec;
       initPgSchema().catch(err => { console.error('PG schema init failed:', err); process.exit(1); });
