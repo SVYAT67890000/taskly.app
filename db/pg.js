@@ -4,7 +4,10 @@ let pool;
 
 function getPool() {
   if (!pool) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const connStr = process.env.DATABASE_URL.includes('?')
+      ? process.env.DATABASE_URL + '&sslmode=require'
+      : process.env.DATABASE_URL + '?sslmode=require';
+    pool = new Pool({ connectionString: connStr });
   }
   return pool;
 }
