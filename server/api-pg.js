@@ -579,40 +579,40 @@ await db.prepare(`    INSERT INTO tasks (id, owner_id, project_id, title, descri
     now
   );
 
-  const newAchievements = checkAndUnlock(req.user.id);
-await db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  const newAchievements = await checkAndUnlock(req.user.id);
+  const row = await db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
   res.json({ task: rowToTask(row), newAchievements });
 });
 
 router.put('/tasks/:id', authMiddleware, async (req, res) => {
   const db = getDb();
-  const existing = await db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Задача не найдена' });
-
-  const task = { ...rowToTask(existing), ...req.body };
+  const task = req.body;
+  const now = new Date().toISOString();
 if (task.projectId && !await userCanAccessProject(req.user.id, task.projectId)) {
-    return res.status(403).json({ error: 'Нет доступа' });
+    return res.status(403).json({ error: 'Нет доступа к проекту' });
   }
 
-  const now = new Date().toISOString();
-await db.prepare(`    UPDATE tasks SET title=?, description=?, status=?, priority=?, date=?, project_id=?, assignees_json=?, share_with_friends=?, attachments_json=?, updated_at=?
-    WHERE id=?
+await db.prepare(`    INSERT INTO tasks (id, owner_id, project_id, title, description, status, priority, date, type, assignees_json, share_with_friends, attachments_json, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) ON CONFLICT (id) DO UPDATE SET project_id = EXCLUDED.project_id, title = EXCLUDED.title, description = EXCLUDED.description, status = EXCLUDED.status, priority = EXCLUDED.priority, date = EXCLUDED.date, type = EXCLUDED.type, assignees_json = EXCLUDED.assignees_json, share_with_friends = EXCLUDED.share_with_friends, attachments_json = EXCLUDED.attachments_json, updated_at = EXCLUDED.updated_at
 `).run(
+    req.params.id,
+    task.ownerId || req.user.id,
+    task.projectId || null,
     task.title,
     task.description || '',
-    task.status,
-    task.priority,
-    task.date,
-    task.projectId,
+    task.status || 'pending',
+    task.priority || 'medium',
+    task.date || null,
+    task.type || 'task',
     JSON.stringify(task.assignees || []),
     task.shareWithFriends ? 1 : 0,
     JSON.stringify(task.attachments || []),
-    now,
-    req.params.id
+    task.createdAt || now,
+    now
   );
 
-  const newAchievements = checkAndUnlock(req.user.id);
-await db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+  const newAchievements = await checkAndUnlock(req.user.id);
+  const row = await db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
   res.json({ task: rowToTask(row), newAchievements });
 });
 
