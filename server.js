@@ -9,8 +9,7 @@ if (process.env.DATABASE_URL) {
   require('express-async-errors');
 }
 
-const apiModule = process.env.DATABASE_URL ? './server/api-pg' : './server/api';
-const { router: apiRouter } = require(apiModule);
+const { router: apiRouter } = require('./server/api-pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
