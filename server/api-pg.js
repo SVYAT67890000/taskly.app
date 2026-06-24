@@ -866,17 +866,37 @@ await db.prepare(`    INSERT INTO messages (id, from_user_id, to_user_id, text, 
   });
 });
 
+router.put('/messages/:id', authMiddleware, async (req, res) => {
+  const db = getDb();
+  const { text } = req.body;
+  if (!text?.trim()) return res.status(400).json({ error: 'Пустое сообщение' });
+  const msg = await db.prepare('SELECT * FROM messages WHERE id = ?').get(req.params.id);
+  if (!msg) return res.status(404).json({ error: 'Сообщение не найдено' });
+  if (msg.from_user_id !== req.user.id) return res.status(403).json({ error: 'Нет доступа' });
+  await db.prepare('UPDATE messages SET text = ? WHERE id = ?').run(text.trim(), req.params.id);
+  res.json({ ok: true });
+});
+
+router.delete('/messages/:id', authMiddleware, async (req, res) => {
+  const db = getDb();
+  const msg = await db.prepare('SELECT * FROM messages WHERE id = ?').get(req.params.id);
+  if (!msg) return res.status(404).json({ error: 'Сообщение не найдено' });
+  if (msg.from_user_id !== req.user.id) return res.status(403).json({ error: 'Нет доступа' });
+  await db.prepare('DELETE FROM messages WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 router.get('/messages/feed', authMiddleware, async (req, res) => {
   const db = getDb();
   const since = parseInt(req.query.since, 10) || 0;
-await db.prepare(`    SELECT m.*, u.username as sender_name
+  const rows = await db.prepare(`    SELECT m.*, u.username as sender_name
     FROM messages m
     JOIN users u ON u.id = m.from_user_id
     WHERE m.to_user_id = ? AND m.created_at > ?
     ORDER BY m.created_at ASC
 `).all(req.user.id, since);
 
-await db.prepare(`    SELECT cm.id, cm.conversation_id, cm.from_user_id, cm.text, cm.created_at,
+  const convRows = await db.prepare(`    SELECT cm.id, cm.conversation_id, cm.from_user_id, cm.text, cm.created_at,
            u.username as sender_name, c.name as conv_name
     FROM conversation_messages cm
     JOIN conversation_members mem ON mem.conversation_id = cm.conversation_id AND mem.user_id = ?
@@ -913,7 +933,7 @@ await db.prepare(`    SELECT cm.id, cm.conversation_id, cm.from_user_id, cm.text
 router.get('/messages/inbox', authMiddleware, async (req, res) => {
   const db = getDb();
   const since = parseInt(req.query.since, 10) || (Date.now() - 7 * 24 * 60 * 60 * 1000);
-await db.prepare(`    SELECT m.id, m.from_user_id, m.text, m.created_at, u.username as sender_name
+  const rows = await db.prepare(`    SELECT m.id, m.from_user_id, m.text, m.created_at, u.username as sender_name
     FROM messages m
     JOIN users u ON u.id = m.from_user_id
     WHERE m.to_user_id = ? AND m.created_at > ?
@@ -921,7 +941,7 @@ await db.prepare(`    SELECT m.id, m.from_user_id, m.text, m.created_at, u.usern
     LIMIT 40
 `).all(req.user.id, since);
 
-await db.prepare(`    SELECT cm.id, cm.conversation_id, cm.from_user_id, cm.text, cm.created_at,
+  const convRows = await db.prepare(`    SELECT cm.id, cm.conversation_id, cm.from_user_id, cm.text, cm.created_at,
            u.username as sender_name, c.name as conv_name
     FROM conversation_messages cm
     JOIN conversation_members mem ON mem.conversation_id = cm.conversation_id AND mem.user_id = ?
@@ -1017,12 +1037,12 @@ const friends = await filterFriendIds(db, req.user.id, memberIds || []);
 
 router.get('/conversations/:id/messages', authMiddleware, async (req, res) => {
   const db = getDb();
-  await db.prepare(
+  const member = await db.prepare(
     'SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ?'
   ).get(req.params.id, req.user.id);
   if (!member) return res.status(403).json({ error: 'Нет доступа' });
 
-await db.prepare(`    SELECT cm.*, u.username as sender_name
+  const rows = await db.prepare(`    SELECT cm.*, u.username as sender_name
     FROM conversation_messages cm
     JOIN users u ON u.id = cm.from_user_id
     WHERE cm.conversation_id = ?
@@ -1073,6 +1093,46 @@ await db.prepare(`    INSERT INTO conversation_messages (id, conversation_id, fr
       senderName: senderRow?.username || 'Участник'
     }
   });
+});
+
+router.put('/conversations/:convId/messages/:msgId', authMiddleware, async (req, res) => {
+  const db = getDb();
+  const { text } = req.body;
+  if (!text?.trim()) return res.status(400).json({ error: 'Пустое сообщение' });
+  const msg = await db.prepare('SELECT * FROM conversation_messages WHERE id = ? AND conversation_id = ?').get(req.params.msgId, req.params.convId);
+  if (!msg) return res.status(404).json({ error: 'Сообщение не найдено' });
+  if (msg.from_user_id !== req.user.id) return res.status(403).json({ error: 'Нет доступа' });
+  await db.prepare('UPDATE conversation_messages SET text = ? WHERE id = ?').run(text.trim(), req.params.msgId);
+  res.json({ ok: true });
+});
+
+router.delete('/conversations/:convId/messages/:msgId', authMiddleware, async (req, res) => {
+  const db = getDb();
+  const msg = await db.prepare('SELECT * FROM conversation_messages WHERE id = ? AND conversation_id = ?').get(req.params.msgId, req.params.convId);
+  if (!msg) return res.status(404).json({ error: 'Сообщение не найдено' });
+  if (msg.from_user_id !== req.user.id) return res.status(403).json({ error: 'Нет доступа' });
+  await db.prepare('DELETE FROM conversation_messages WHERE id = ?').run(req.params.msgId);
+  res.json({ ok: true });
+});
+
+router.delete('/conversations/:id', authMiddleware, async (req, res) => {
+  const db = getDb();
+  const conv = await db.prepare('SELECT * FROM conversations WHERE id = ?').get(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Чат не найден' });
+  if (conv.owner_id !== req.user.id) return res.status(403).json({ error: 'Только создатель может удалить чат' });
+  await db.prepare('DELETE FROM conversation_messages WHERE conversation_id = ?').run(req.params.id);
+  await db.prepare('DELETE FROM conversation_members WHERE conversation_id = ?').run(req.params.id);
+  await db.prepare('DELETE FROM conversations WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+router.post('/conversations/:id/leave', authMiddleware, async (req, res) => {
+  const db = getDb();
+  const conv = await db.prepare('SELECT * FROM conversations WHERE id = ?').get(req.params.id);
+  if (!conv) return res.status(404).json({ error: 'Чат не найден' });
+  if (conv.owner_id === req.user.id) return res.status(400).json({ error: 'Создатель не может выйти. Удалите чат.' });
+  await db.prepare('DELETE FROM conversation_members WHERE conversation_id = ? AND user_id = ?').run(req.params.id, req.user.id);
+  res.json({ ok: true });
 });
 
 // ——— Stats ———
