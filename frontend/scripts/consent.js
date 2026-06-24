@@ -34,7 +34,7 @@ function setPersonalDataConsent(accepted) {
 }
 
 function isRegisterPage() {
-  return window.location.pathname.includes('register.html');
+  return window.location.pathname.includes('register');
 }
 
 function closeConsentEl(id) {

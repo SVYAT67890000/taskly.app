@@ -45,15 +45,18 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+const FALLBACK_VAPID_PUBLIC = 'BCrUpJD4tx0ajARiSPNVqhHXZ3vAaVSSi0-WAmCkqJTtcAbJrQOeeGDgmbbB6MQVp-8_0K_gC6v8XuzOhpXlwkU';
+const FALLBACK_VAPID_PRIVATE = 'ZQKtlYgjkDW8uTnhEQ1kK94BDIVY0ILsb62ZGiaf-HY';
+
 function getVapidPublicKey(env) {
-  return env.VAPID_PUBLIC_KEY || '';
+  return env.VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC;
 }
 
 let webPushConfigured = false;
 function ensureWebPushConfigured(env) {
   if (!webPushConfigured) {
-    const pubKey = env.VAPID_PUBLIC_KEY;
-    const privKey = env.VAPID_PRIVATE_KEY;
+    const pubKey = env.VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC;
+    const privKey = env.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE;
     if (pubKey && privKey) {
       webPush.setVapidDetails('mailto:noreply@taskly.app', pubKey, privKey);
       webPushConfigured = true;

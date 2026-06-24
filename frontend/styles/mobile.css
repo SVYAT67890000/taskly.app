@@ -18,6 +18,21 @@ html {
     font-size: 0.85rem;
   }
 
+  .notification-bell-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .notification-dropdown {
+    position: fixed;
+    top: 60px;
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-height: 50vh;
+    border-radius: var(--radius-md);
+  }
+
   .user-avatar {
     width: 28px;
     height: 28px;

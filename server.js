@@ -3,7 +3,14 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { router: apiRouter } = require('./server/api');
+
+// Handle async errors in Express 4
+if (process.env.DATABASE_URL) {
+  require('express-async-errors');
+}
+
+const apiModule = process.env.DATABASE_URL ? './server/api-pg' : './server/api';
+const { router: apiRouter } = require(apiModule);
 
 const app = express();
 const PORT = process.env.PORT || 3000;

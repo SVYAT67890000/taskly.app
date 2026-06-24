@@ -35,6 +35,9 @@ async function subscribeToPushNotifications() {
   if (!reg) throw new Error('Service Worker не готов. Обновите страницу.');
 
   const { publicKey } = await TasklyApi.getVapidKey();
+  if (!publicKey) {
+    throw new Error('Push-уведомления не настроены. Установите VAPID-ключи в Cloudflare Dashboard.');
+  }
   let subscription = await reg.pushManager.getSubscription();
 
   if (!subscription) {

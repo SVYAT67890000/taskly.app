@@ -19,7 +19,7 @@ function checkAuth() {
   const currentUser = getCurrentUser();
   
   if (!token || !currentUser) {
-    const protectedPages = ['index.html', 'calendar.html', 'profile.html', 'friends.html', 'stats.html', 'mindmap.html', 'notes.html', 'support.html'];
+    const protectedPages = ['index', 'calendar', 'profile', 'friends', 'stats', 'mindmap', 'notes', 'support'];
     const path = window.location.pathname;
     if (protectedPages.some(p => path.includes(p)) || path.endsWith('/')) {
       window.location.href = 'login.html';
@@ -28,7 +28,7 @@ function checkAuth() {
   }
   
   if (token && currentUser) {
-    if (window.location.pathname.includes('login.html') || window.location.pathname.includes('register.html')) {
+    if (window.location.pathname.includes('login') || window.location.pathname.includes('register')) {
       verifySessionAndRedirect();
       return false;
     }
@@ -300,7 +300,7 @@ async function bootstrapUserData() {
     console.warn('Bootstrap:', e.message);
     if (e.status === 401) {
       clearAuthSession();
-      if (!window.location.pathname.includes('login.html') && !window.location.pathname.includes('register.html')) {
+      if (!window.location.pathname.includes('login') && !window.location.pathname.includes('register')) {
         window.location.href = 'login.html';
       }
     }

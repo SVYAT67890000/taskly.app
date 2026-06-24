@@ -180,7 +180,7 @@ function confirmDeleteTask(taskId, taskTitle) {
 function ensureSiteFooter() {
   if (document.querySelector('.site-footer')) return;
   if (document.body.classList.contains('mindmap-body')) return;
-  if (window.location.pathname.includes('login.html') || window.location.pathname.includes('register.html')) return;
+  if (window.location.pathname.includes('login') || window.location.pathname.includes('register')) return;
   document.body.insertAdjacentHTML('beforeend', SITE_FOOTER_HTML);
 }
 
@@ -237,7 +237,52 @@ document.addEventListener('DOMContentLoaded', () => {
   ensureSiteFooter();
 });
 
+const CONFIRM_ACTION_MODAL_HTML = `
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-modern">
+    <div class="modal-content-modern">
+      <div class="modal-header-modern">
+        <div class="modal-header-content">
+          <h5 class="modal-title-modern" id="confirmActionTitle">Подтвердите действие</h5>
+          <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+        </div>
+      </div>
+      <div class="modal-body-modern"><p id="confirmActionText">Вы уверены?</p></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn-submit btn-danger-solid" id="confirmActionBtn">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+let pendingConfirmAction = null;
+
+function ensureConfirmActionModal() {
+  if (document.getElementById('confirmActionModal')) return;
+  document.body.insertAdjacentHTML('beforeend', CONFIRM_ACTION_MODAL_HTML);
+  document.getElementById('confirmActionBtn')?.addEventListener('click', () => {
+    const cb = pendingConfirmAction;
+    pendingConfirmAction = null;
+    if (typeof bootstrap !== 'undefined') {
+      bootstrap.Modal.getInstance(document.getElementById('confirmActionModal'))?.hide();
+    }
+    if (typeof cb === 'function') cb();
+  });
+}
+
+function confirmAction(title, text, callback) {
+  ensureConfirmActionModal();
+  document.getElementById('confirmActionTitle').textContent = title;
+  document.getElementById('confirmActionText').textContent = text;
+  pendingConfirmAction = callback;
+  if (typeof bootstrap !== 'undefined') {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmActionModal')).show();
+  }
+}
+
 window.ensureSharedModals = ensureSharedModals;
+window.confirmAction = confirmAction;
 window.showAppError = showAppError;
 window.hideAppError = hideAppError;
 window.validateEmail = validateEmail;

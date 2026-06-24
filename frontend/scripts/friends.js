@@ -71,19 +71,20 @@ function bindEvents() {
 async function handleChatMessageClick(e) {
   const delBtn = e.target.closest('.chat-message-delete');
   if (delBtn) {
-    if (!confirm('Удалить сообщение?')) return;
     const msgId = delBtn.dataset.msgId;
     const kind = delBtn.dataset.kind;
-    try {
-      if (kind === 'group') {
-        await TasklyApi.deleteConversationMessage(selectedGroupId, msgId);
-      } else {
-        await TasklyApi.deleteMessage(msgId);
+    confirmAction('Удалить сообщение', 'Сообщение будет удалено без возможности восстановления.', async () => {
+      try {
+        if (kind === 'group') {
+          await TasklyApi.deleteConversationMessage(selectedGroupId, msgId);
+        } else {
+          await TasklyApi.deleteMessage(msgId);
+        }
+        renderChatMessages();
+      } catch (e) {
+        showNotification?.(e.message || 'Ошибка удаления', { type: 'warning' });
       }
-      renderChatMessages();
-    } catch (e) {
-      showNotification?.(e.message || 'Ошибка удаления', { type: 'warning' });
-    }
+    });
     return;
   }
 
@@ -133,28 +134,30 @@ async function handleChatMessageClick(e) {
 
 async function handleLeaveGroup() {
   if (!selectedGroupId) return;
-  if (!confirm('Покинуть беседу?')) return;
-  try {
-    await TasklyApi.leaveConversation(selectedGroupId);
-    selectedGroupId = null;
-    showNotification?.('Вы покинули беседу', { type: 'info' });
-    await loadFriendsData();
-  } catch (e) {
-    showNotification?.(e.message || 'Ошибка', { type: 'warning' });
-  }
+  confirmAction('Покинуть беседу', 'Вы перестанете видеть сообщения этой беседы.', async () => {
+    try {
+      await TasklyApi.leaveConversation(selectedGroupId);
+      selectedGroupId = null;
+      showNotification?.('Вы покинули беседу', { type: 'info' });
+      await loadFriendsData();
+    } catch (e) {
+      showNotification?.(e.message || 'Ошибка', { type: 'warning' });
+    }
+  });
 }
 
 async function handleDeleteGroup() {
   if (!selectedGroupId) return;
-  if (!confirm('Удалить беседу навсегда? Это действие нельзя отменить.')) return;
-  try {
-    await TasklyApi.deleteConversation(selectedGroupId);
-    selectedGroupId = null;
-    showNotification?.('Беседа удалена', { type: 'info' });
-    await loadFriendsData();
-  } catch (e) {
-    showNotification?.(e.message || 'Ошибка', { type: 'warning' });
-  }
+  confirmAction('Удалить беседу', 'Беседа будет удалена навсегда. Это действие нельзя отменить.', async () => {
+    try {
+      await TasklyApi.deleteConversation(selectedGroupId);
+      selectedGroupId = null;
+      showNotification?.('Беседа удалена', { type: 'info' });
+      await loadFriendsData();
+    } catch (e) {
+      showNotification?.(e.message || 'Ошибка', { type: 'warning' });
+    }
+  });
 }
 
 function setupMobilePanels() {
@@ -619,11 +622,14 @@ async function handleSendMessage(event) {
 
 function removeSelectedFriend() {
   if (!selectedFriendId) return;
-  if (!confirm('Удалить пользователя из друзей?')) return;
-  removeFriend(selectedFriendId);
-  selectedFriendId = null;
-  loadFriendsData();
-  setMobilePanel('friends');
+  const friend = friendsLookup[selectedFriendId];
+  const name = friend ? (friend.username || friend.email) : 'пользователя';
+  confirmAction('Удалить из друзей', `Вы уверены, что хотите удалить ${name} из друзей?`, async () => {
+    await removeFriend(selectedFriendId);
+    selectedFriendId = null;
+    loadFriendsData();
+    setMobilePanel('friends');
+  });
 }
 
 function loadConversationMessages(friendId) {

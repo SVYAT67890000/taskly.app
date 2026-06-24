@@ -1,47 +1,48 @@
 const { getDb } = require('./init');
 
-function getStats(userId) {
+async function getStats(userId) {
   const db = getDb();
-  const completedTasks = db.prepare(
-    `SELECT COUNT(*) as c FROM tasks WHERE owner_id = ? AND status = 'completed'`
-  ).get(userId).c;
 
-  const completedAsAssignee = db.prepare(`
+  const completedTasks = (await db.prepare(
+    `SELECT COUNT(*) as c FROM tasks WHERE owner_id = $1 AND status = 'completed'`
+  ).get(userId))?.c || 0;
+
+  const completedAsAssignee = (await db.prepare(`
     SELECT COUNT(*) as c FROM tasks
-    WHERE status = 'completed' AND assignees_json LIKE ?
-  `).get(`%"${userId}"%`).c;
+    WHERE status = 'completed' AND assignees_json LIKE $1
+  `).get(`%"${userId}"%`))?.c || 0;
 
   const totalCompleted = completedTasks + completedAsAssignee;
 
-  const projectsOwned = db.prepare(
-    `SELECT COUNT(*) as c FROM projects WHERE owner_id = ?`
-  ).get(userId).c;
+  const projectsOwned = (await db.prepare(
+    `SELECT COUNT(*) as c FROM projects WHERE owner_id = $1`
+  ).get(userId))?.c || 0;
 
-  const collabProjects = db.prepare(`
+  const collabProjects = (await db.prepare(`
     SELECT COUNT(DISTINCT pm.project_id) as c FROM project_members pm
     JOIN projects p ON p.id = pm.project_id
-    WHERE pm.user_id = ? AND (
+    WHERE pm.user_id = $1 AND (
       SELECT COUNT(*) FROM project_members WHERE project_id = pm.project_id
     ) > 1
-  `).get(userId).c;
+  `).get(userId))?.c || 0;
 
-  const friendsCount = db.prepare(
-    `SELECT COUNT(*) as c FROM friendships WHERE user_id = ?`
-  ).get(userId).c;
+  const friendsCount = (await db.prepare(
+    `SELECT COUNT(*) as c FROM friendships WHERE user_id = $1`
+  ).get(userId))?.c || 0;
 
-  const messagesSent = db.prepare(
-    `SELECT COUNT(*) as c FROM messages WHERE from_user_id = ?`
-  ).get(userId).c;
+  const messagesSent = (await db.prepare(
+    `SELECT COUNT(*) as c FROM messages WHERE from_user_id = $1`
+  ).get(userId))?.c || 0;
 
-  const notesCount = db.prepare(
-    `SELECT COUNT(*) as c FROM notes WHERE user_id = ?`
-  ).get(userId).c;
+  const notesCount = (await db.prepare(
+    `SELECT COUNT(*) as c FROM notes WHERE user_id = $1`
+  ).get(userId))?.c || 0;
 
-  const mindmapEdits = db.prepare(`
+  const mindmapEdits = (await db.prepare(`
     SELECT COUNT(*) as c FROM mind_maps mm
     JOIN project_members pm ON pm.project_id = mm.project_id
-    WHERE pm.user_id = ? AND mm.updated_by = ?
-  `).get(userId, userId).c;
+    WHERE pm.user_id = $1 AND mm.updated_by = $1
+  `).get(userId))?.c || 0;
 
   return {
     completedTasks: totalCompleted,
@@ -54,26 +55,26 @@ function getStats(userId) {
   };
 }
 
-function unlockAchievement(userId, achievementId) {
+async function unlockAchievement(userId, achievementId) {
   const db = getDb();
-  const exists = db.prepare(
-    'SELECT 1 FROM user_achievements WHERE user_id = ? AND achievement_id = ?'
+  const exists = await db.prepare(
+    'SELECT 1 FROM user_achievements WHERE user_id = $1 AND achievement_id = $2'
   ).get(userId, achievementId);
   if (exists) return null;
 
-  const ach = db.prepare('SELECT * FROM achievements WHERE id = ?').get(achievementId);
+  const ach = await db.prepare('SELECT * FROM achievements WHERE id = $1').get(achievementId);
   if (!ach) return null;
 
   const now = new Date().toISOString();
-  db.prepare(
-    'INSERT INTO user_achievements (user_id, achievement_id, unlocked_at) VALUES (?, ?, ?)'
+  await db.prepare(
+    'INSERT INTO user_achievements (user_id, achievement_id, unlocked_at) VALUES ($1, $2, $3)'
   ).run(userId, achievementId, now);
 
   return { ...ach, unlockedAt: now };
 }
 
-function checkAndUnlock(userId) {
-  const stats = getStats(userId);
+async function checkAndUnlock(userId) {
+  const stats = await getStats(userId);
   const unlocked = [];
 
   const rules = [
@@ -91,7 +92,7 @@ function checkAndUnlock(userId) {
 
   for (const rule of rules) {
     if (rule.ok) {
-      const result = unlockAchievement(userId, rule.id);
+      const result = await unlockAchievement(userId, rule.id);
       if (result) unlocked.push(result);
     }
   }
@@ -99,11 +100,11 @@ function checkAndUnlock(userId) {
   return unlocked;
 }
 
-function getUserAchievements(userId) {
+async function getUserAchievements(userId) {
   const db = getDb();
-  const all = db.prepare('SELECT * FROM achievements ORDER BY category, id').all();
-  const userRows = db.prepare(
-    'SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = ?'
+  const all = await db.prepare('SELECT * FROM achievements ORDER BY category, id').all();
+  const userRows = await db.prepare(
+    'SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = $1'
   ).all(userId);
   const map = Object.fromEntries(userRows.map(r => [r.achievement_id, r.unlocked_at]));
 

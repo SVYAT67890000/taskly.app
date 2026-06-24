@@ -46,19 +46,19 @@ function formatUser(row) {
   };
 }
 
-function findUserByTagOrPublicId(query) {
+async function findUserByTagOrPublicId(query) {
   const db = getDb();
   const trimmed = (query || '').trim();
 
-  const publicMatch = db.prepare(
-    'SELECT * FROM users WHERE public_id = ? COLLATE NOCASE'
+  const publicMatch = await db.prepare(
+    'SELECT * FROM users WHERE public_id = $1'
   ).get(trimmed.toUpperCase());
   if (publicMatch) return publicMatch;
 
   const tagMatch = trimmed.match(/^(.+?)#(\d{4})$/);
   if (tagMatch) {
-    return db.prepare(
-      'SELECT * FROM users WHERE username = ? AND discriminator = ?'
+    return await db.prepare(
+      'SELECT * FROM users WHERE username = $1 AND discriminator = $2'
     ).get(tagMatch[1].trim(), tagMatch[2]);
   }
 
@@ -66,20 +66,20 @@ function findUserByTagOrPublicId(query) {
     return null;
   }
 
-  return db.prepare(
-    'SELECT * FROM users WHERE username = ? COLLATE NOCASE'
+  return await db.prepare(
+    'SELECT * FROM users WHERE username = $1'
   ).get(trimmed);
 }
 
-function createUser({ username, email, password, personalDataConsent = false }) {
+async function createUser({ username, email, password, personalDataConsent = false }) {
   const db = getDb();
   const id = generateId();
   let discriminator;
   let attempts = 0;
   do {
     discriminator = generateDiscriminator();
-    const clash = db.prepare(
-      'SELECT 1 FROM users WHERE username = ? AND discriminator = ?'
+    const clash = await db.prepare(
+      'SELECT 1 FROM users WHERE username = $1 AND discriminator = $2'
     ).get(username, discriminator);
     if (!clash) break;
     attempts++;
@@ -89,7 +89,7 @@ function createUser({ username, email, password, personalDataConsent = false }) 
   attempts = 0;
   do {
     publicId = generatePublicId();
-    const clash = db.prepare('SELECT 1 FROM users WHERE public_id = ?').get(publicId);
+    const clash = await db.prepare('SELECT 1 FROM users WHERE public_id = $1').get(publicId);
     if (!clash) break;
     attempts++;
   } while (attempts < 20);
@@ -103,42 +103,42 @@ function createUser({ username, email, password, personalDataConsent = false }) 
     personalDataConsentDate: personalDataConsent ? now : null
   });
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO users (id, username, discriminator, email, password_hash, public_id, avatar_json, preferences_json, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
   `).run(id, username, discriminator, email, passwordHash, publicId, avatarJson, prefsJson, now);
 
-  return formatUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id));
+  return formatUser(await db.prepare('SELECT * FROM users WHERE id = $1').get(id));
 }
 
 function verifyPassword(row, password) {
   return bcrypt.compareSync(password, row.password_hash);
 }
 
-function createSession(userId) {
+async function createSession(userId) {
   const db = getDb();
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-  db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, expiresAt);
+  await db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)').run(token, userId, expiresAt);
   return token;
 }
 
-function getUserByToken(token) {
+async function getUserByToken(token) {
   const db = getDb();
-  const session = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
+  const session = await db.prepare('SELECT * FROM sessions WHERE token = $1').get(token);
   if (!session || session.expires_at < Date.now()) return null;
-  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id);
+  const row = await db.prepare('SELECT * FROM users WHERE id = $1').get(session.user_id);
   return formatUser(row);
 }
 
-function deleteSession(token) {
+async function deleteSession(token) {
   const db = getDb();
-  db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+  await db.prepare('DELETE FROM sessions WHERE token = $1').run(token);
 }
 
-function deleteAllUserSessions(userId) {
+async function deleteAllUserSessions(userId) {
   const db = getDb();
-  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+  await db.prepare('DELETE FROM sessions WHERE user_id = $1').run(userId);
 }
 
 module.exports = {

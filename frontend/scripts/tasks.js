@@ -297,7 +297,7 @@ function toggleTaskStatus(taskId) {
     renderTasks();
     
     
-    if (window.location.pathname.includes('calendar.html')) {
+    if (window.location.pathname.includes('calendar')) {
       if (typeof loadTasksForCalendar === 'function' && typeof renderCalendar === 'function') {
         loadTasksForCalendar();
         renderCalendar();
@@ -410,7 +410,7 @@ function setupEditModal() {
       renderTasks();
       
       
-      if (window.location.pathname.includes('calendar.html')) {
+      if (window.location.pathname.includes('calendar')) {
         if (typeof loadTasksForCalendar === 'function' && typeof renderCalendar === 'function') {
           loadTasksForCalendar();
           renderCalendar();
@@ -632,7 +632,7 @@ function setupTaskForm() {
     showNotification?.('Задача создана!');
     if (typeof renderTasks === 'function') renderTasks();
 
-    if (window.location.pathname.includes('calendar.html')) {
+    if (window.location.pathname.includes('calendar')) {
       loadTasksForCalendar?.();
       renderCalendar?.();
       return;

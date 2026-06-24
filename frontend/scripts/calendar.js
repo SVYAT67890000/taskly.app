@@ -9,7 +9,7 @@ let calendarControlsInitialized = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   
-  if (!window.location.pathname.includes('calendar.html')) {
+  if (!window.location.pathname.includes('calendar')) {
     return;
   }
   
@@ -24,16 +24,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   
-  if (calendarContainer && currentMonthYearEl) {
-    setupCalendarControls();
-    loadTasksForCalendar();
-    console.log('Загружено задач:', calendarTasks.length);
-    renderCalendar();
-  } else {
-    console.error('Элементы календаря не найдены', {
-      calendarContainer: !!calendarContainer,
-      currentMonthYearEl: !!currentMonthYearEl
-    });
+  try {
+    if (calendarContainer && currentMonthYearEl) {
+      setupCalendarControls();
+      loadTasksForCalendar();
+      console.log('Загружено задач:', calendarTasks.length);
+      renderCalendar();
+    } else {
+      console.error('Элементы календаря не найдены', {
+        calendarContainer: !!calendarContainer,
+        currentMonthYearEl: !!currentMonthYearEl
+      });
+      showCalendarError('Элементы календаря не найдены в DOM.');
+    }
+  } catch (e) {
+    console.error('Ошибка инициализации календаря:', e);
+    showCalendarError('Ошибка инициализации: ' + e.message);
   }
   
   
@@ -83,6 +89,11 @@ function setupCalendarControls() {
   calendarControlsInitialized = true;
 }
 
+
+function showCalendarError(msg) {
+  if (!calendarContainer) return;
+  calendarContainer.innerHTML = `<div class="calendar-error" style="padding:2rem;text-align:center;color:var(--text-secondary);"><p>${escapeHtml(msg)}</p></div>`;
+}
 
 function loadTasksForCalendar() {
   if (typeof getUserTasks === 'function') {

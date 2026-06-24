@@ -40,38 +40,38 @@ function getVapidPublicKey() {
   return vapidKeys.publicKey;
 }
 
-function saveSubscription(userId, subscription) {
+async function saveSubscription(userId, subscription) {
   const db = getDb();
   const id = subscription.endpoint.slice(-40);
   const now = new Date().toISOString();
-  db.prepare(`
-    INSERT OR REPLACE INTO push_subscriptions (id, user_id, endpoint, keys_json, created_at)
-    VALUES (?, ?, ?, ?, ?)
+  await db.prepare(`
+    INSERT INTO push_subscriptions (id, user_id, endpoint, keys_json, created_at)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (id) DO UPDATE SET endpoint = $3, keys_json = $4
   `).run(id, userId, subscription.endpoint, JSON.stringify(subscription.keys), now);
 }
 
-function removeSubscription(userId, endpoint) {
-  getDb().prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?')
+async function removeSubscription(userId, endpoint) {
+  await getDb().prepare('DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2')
     .run(userId, endpoint);
 }
 
-function getUserSubscriptions(userId) {
-  return getDb().prepare('SELECT * FROM push_subscriptions WHERE user_id = ?').all(userId);
+async function getUserSubscriptions(userId) {
+  return await getDb().prepare('SELECT * FROM push_subscriptions WHERE user_id = $1').all(userId);
 }
 
-function getUserTasksForReminders(userId) {
+async function getUserTasksForReminders(userId) {
   const db = getDb();
-  const rows = db.prepare(`
+  return await db.prepare(`
     SELECT t.* FROM tasks t
-    LEFT JOIN project_members pm ON pm.project_id = t.project_id AND pm.user_id = ?
+    LEFT JOIN project_members pm ON pm.project_id = t.project_id AND pm.user_id = $1
     WHERE t.status != 'completed'
-      AND (t.owner_id = ? OR pm.user_id IS NOT NULL OR t.assignees_json LIKE ?)
-  `).all(userId, userId, `%"${userId}"%`);
-  return rows;
+      AND (t.owner_id = $1 OR pm.user_id IS NOT NULL OR t.assignees_json LIKE $2)
+  `).all(userId, `%"${userId}"%`);
 }
 
-function getUserLeadDays(userId) {
-  const row = getDb().prepare('SELECT preferences_json FROM users WHERE id = ?').get(userId);
+async function getUserLeadDays(userId) {
+  const row = await getDb().prepare('SELECT preferences_json FROM users WHERE id = $1').get(userId);
   if (!row) return 1;
   try {
     const prefs = JSON.parse(row.preferences_json || '{}');
@@ -81,23 +81,24 @@ function getUserLeadDays(userId) {
   }
 }
 
-function wasReminderSent(userId, taskId, taskDate) {
-  const row = getDb().prepare(
-    'SELECT 1 FROM push_reminder_log WHERE user_id = ? AND task_id = ? AND task_date = ?'
+async function wasReminderSent(userId, taskId, taskDate) {
+  const row = await getDb().prepare(
+    'SELECT 1 FROM push_reminder_log WHERE user_id = $1 AND task_id = $2 AND task_date = $3'
   ).get(userId, taskId, taskDate);
   return !!row;
 }
 
-function markReminderSent(userId, taskId, taskDate) {
-  getDb().prepare(`
-    INSERT OR IGNORE INTO push_reminder_log (user_id, task_id, task_date, sent_at)
-    VALUES (?, ?, ?, ?)
+async function markReminderSent(userId, taskId, taskDate) {
+  await getDb().prepare(`
+    INSERT INTO push_reminder_log (user_id, task_id, task_date, sent_at)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (user_id, task_id, task_date) DO NOTHING
   `).run(userId, taskId, taskDate, new Date().toISOString());
 }
 
 async function sendPushToUser(userId, payload) {
   if (!vapidKeys) initWebPush();
-  const subs = getUserSubscriptions(userId);
+  const subs = await getUserSubscriptions(userId);
   const body = JSON.stringify(payload);
   for (const sub of subs) {
     try {
@@ -107,7 +108,7 @@ async function sendPushToUser(userId, payload) {
       }, body);
     } catch (err) {
       if (err.statusCode === 410 || err.statusCode === 404) {
-        removeSubscription(userId, sub.endpoint);
+        await removeSubscription(userId, sub.endpoint);
       }
     }
   }
@@ -122,18 +123,18 @@ function buildReminderMessage(task, diffMs) {
 
 async function checkAndSendReminders() {
   const db = getDb();
-  const userIds = db.prepare(`
+  const userIds = (await db.prepare(`
     SELECT DISTINCT user_id FROM push_subscriptions
-  `).all().map(r => r.user_id);
+  `).all()).map(r => r.user_id);
 
   const now = new Date();
 
   for (const userId of userIds) {
-    const prefs = getUserNotificationPrefs(userId);
+    const prefs = await getUserNotificationPrefs(userId);
     if (!prefs.reminders) continue;
-    const leadDays = getUserLeadDays(userId);
+    const leadDays = await getUserLeadDays(userId);
     const leadMs = leadDays * 24 * 60 * 60 * 1000;
-    const tasks = getUserTasksForReminders(userId);
+    const tasks = await getUserTasksForReminders(userId);
 
     for (const row of tasks) {
       if (!row.date) continue;
@@ -141,7 +142,7 @@ async function checkAndSendReminders() {
       dueEnd.setHours(23, 59, 59, 999);
       const diffMs = dueEnd.getTime() - now.getTime();
       if (diffMs < 0 || diffMs > leadMs) continue;
-      if (wasReminderSent(userId, row.id, row.date)) continue;
+      if (await wasReminderSent(userId, row.id, row.date)) continue;
 
       const message = buildReminderMessage({ title: row.title }, diffMs);
       await sendPushToUser(userId, {
@@ -153,7 +154,7 @@ async function checkAndSendReminders() {
         url: '/index.html',
         taskId: row.id
       });
-      markReminderSent(userId, row.id, row.date);
+      await markReminderSent(userId, row.id, row.date);
     }
   }
 }
@@ -169,8 +170,8 @@ function startReminderPushJob() {
   }, CHECK_INTERVAL_MS);
 }
 
-function getUserNotificationPrefs(userId) {
-  const row = getDb().prepare('SELECT preferences_json FROM users WHERE id = ?').get(userId);
+async function getUserNotificationPrefs(userId) {
+  const row = await getDb().prepare('SELECT preferences_json FROM users WHERE id = $1').get(userId);
   try {
     const prefs = JSON.parse(row?.preferences_json || '{}');
     const n = prefs.notifications || {};
@@ -185,7 +186,7 @@ function getUserNotificationPrefs(userId) {
 }
 
 async function notifyNewMessage(recipientId, senderName, text, senderId) {
-  const prefs = getUserNotificationPrefs(recipientId);
+  const prefs = await getUserNotificationPrefs(recipientId);
   if (!prefs.messages) return;
   const preview = text.length > 140 ? `${text.slice(0, 137)}...` : text;
   await sendPushToUser(recipientId, {
@@ -200,7 +201,7 @@ async function notifyNewMessage(recipientId, senderName, text, senderId) {
 }
 
 async function notifyFriendRequest(recipientId, senderName) {
-  const prefs = getUserNotificationPrefs(recipientId);
+  const prefs = await getUserNotificationPrefs(recipientId);
   if (!prefs.friendRequests) return;
   await sendPushToUser(recipientId, {
     title: 'Заявка в друзья',

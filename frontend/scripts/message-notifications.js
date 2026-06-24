@@ -40,7 +40,7 @@ function saveMessagePollState() {
 }
 
 function shouldSkipMessageNotification(chatKey, isGroup) {
-  if (!window.location.pathname.includes('friends.html')) return false;
+  if (!window.location.pathname.includes('friends')) return false;
   if (isGroup) {
     if (typeof selectedGroupId !== 'undefined' && selectedGroupId === chatKey) return true;
     const params = new URLSearchParams(window.location.search);

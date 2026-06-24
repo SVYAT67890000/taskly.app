@@ -1,0 +1,11 @@
+[build]
+  buildCommand = "npm install"
+  startCommand = "npm start"
+
+[deploy]
+  healthcheckPath = "/api/health"
+  healthcheckTimeout = 300
+
+[runner]
+  buildCommand = "npm install"
+  startCommand = "node server.js"

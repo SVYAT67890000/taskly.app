@@ -31,7 +31,7 @@ async function syncWithServer() {
       loadTasksForCalendar();
       renderCalendar();
     }
-    if (window.location.pathname.includes('notes.html') && typeof loadNotes === 'function') {
+    if (window.location.pathname.includes('notes') && typeof loadNotes === 'function') {
       loadNotes();
     }
     if (typeof pollMessageNotifications === 'function') pollMessageNotifications();
