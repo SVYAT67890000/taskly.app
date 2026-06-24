@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+console.log('[debug] DATABASE_URL:', process.env.DATABASE_URL ? 'SET (length=' + process.env.DATABASE_URL.length + ')' : 'NOT SET');
+
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
