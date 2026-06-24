@@ -48,7 +48,7 @@ async function saveSubscription(userId, subscription) {
     INSERT INTO push_subscriptions (id, user_id, endpoint, keys_json, created_at)
     VALUES (?, ?, ?, ?, ?)
     ON CONFLICT (id) DO UPDATE SET endpoint = ?, keys_json = ?
-  `).run(id, userId, subscription.endpoint, JSON.stringify(subscription.keys), now);
+  `).run(id, userId, subscription.endpoint, JSON.stringify(subscription.keys), now, subscription.endpoint, JSON.stringify(subscription.keys));
 }
 
 async function removeSubscription(userId, endpoint) {

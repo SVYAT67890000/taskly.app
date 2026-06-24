@@ -239,7 +239,7 @@ router.post('/auth/forgot-password', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Введите email' });
 
   const db = getDb();
-await db.prepare('SELECT id, email FROM users WHERE lower(email) = ?').get(email);
+  const row = await db.prepare('SELECT id, email FROM users WHERE lower(email) = ?').get(email);
   if (row) {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = Date.now() + 10 * 60 * 1000;
@@ -272,10 +272,10 @@ router.post('/auth/reset-password', async (req, res) => {
   }
 
   const db = getDb();
-await db.prepare('SELECT * FROM users WHERE lower(email) = ?').get(email);
+  const row = await db.prepare('SELECT * FROM users WHERE lower(email) = ?').get(email);
   if (!row) return res.status(400).json({ error: 'Неверный код или email' });
 
-await db.prepare('SELECT code, expires_at FROM password_codes WHERE user_id = ?').get(row.id);
+  const stored = await db.prepare('SELECT code, expires_at FROM password_codes WHERE user_id = ?').get(row.id);
   if (!stored || Date.now() > stored.expires_at) {
 await db.prepare('DELETE FROM password_codes WHERE user_id = ?').run(row.id);
     return res.status(400).json({ error: 'Код просрочен или не запрашивался' });
@@ -395,7 +395,7 @@ router.post('/users/password/request-code', authMiddleware, async (req, res) => 
 await db.prepare(`    INSERT INTO password_codes (user_id, code, expires_at) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at
 `).run(req.user.id, code, expiresAt);
 
-await db.prepare('SELECT email FROM users WHERE id = ?').get(req.user.id);
+  const row = await db.prepare('SELECT email FROM users WHERE id = ?').get(req.user.id);
   const { sendPasswordCodeEmail } = require('./email');
   try {
     const result = await sendPasswordCodeEmail(row.email, code);
@@ -438,7 +438,7 @@ await db.prepare('DELETE FROM password_codes WHERE user_id = ?').run(req.user.id
 router.delete('/users/me', authMiddleware, async (req, res) => {
   const { email, password } = req.body || {};
   const db = getDb();
-await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!row) return res.status(404).json({ error: 'Пользователь не найден' });
 
   const confirmEmail = String(email || '').trim().toLowerCase();
@@ -675,10 +675,10 @@ await db.prepare(`    INSERT INTO mind_maps (project_id, nodes_json, edges_json,
     VALUES (?, '[]', '[]', ?, ?)
 `).run(id, now, req.user.id);
 
-  const newAchievements = checkAndUnlock(req.user.id);
-await db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+  const newAchievements = await checkAndUnlock(req.user.id);
+  const row = await db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
   res.json({
-project: rowToProject(row, await getProjectMembers(id)),
+    project: rowToProject(row, await getProjectMembers(id)),
     newAchievements
   });
 });
@@ -704,10 +704,10 @@ if (!await userCanAccessProject(req.user.id, req.params.id)) {
 await insertMember.run(req.params.id, uid);
     }
   }
-await db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
-  const newAchievements = checkAndUnlock(req.user.id);
+  const row = await db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  const newAchievements = await checkAndUnlock(req.user.id);
   res.json({
-project: rowToProject(row, await getProjectMembers(req.params.id)),
+    project: rowToProject(row, await getProjectMembers(req.params.id)),
     newAchievements
   });
 });
@@ -723,14 +723,14 @@ router.post('/friends/request', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Нельзя добавить себя' });
   }
 
-  await db.prepare(
+  const existingFriend = await db.prepare(
     'SELECT 1 FROM friendships WHERE user_id = ? AND friend_id = ?'
   ).get(req.user.id, targetRow.id);
   if (existingFriend) {
     return res.status(400).json({ error: 'Уже в друзьях' });
   }
 
-await db.prepare(`    SELECT * FROM friend_requests
+  const pending = await db.prepare(`    SELECT * FROM friend_requests
     WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?))
     AND status = 'pending'
 `).get(req.user.id, targetRow.id, targetRow.id, req.user.id);
@@ -745,7 +745,7 @@ await db.prepare(`    INSERT INTO friend_requests (id, from_user_id, to_user_id,
     VALUES (?, ?, ?, 'pending', ?)
 `).run(id, req.user.id, targetRow.id, now);
 
-await db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
+  const senderRow = await db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
   const { notifyFriendRequest } = require('../db/push');
   notifyFriendRequest(targetRow.id, senderRow?.username || 'Пользователь')
     .catch(err => console.warn('Friend request push:', err.message));
@@ -846,13 +846,13 @@ router.post('/messages/:friendId', authMiddleware, async (req, res) => {
 await db.prepare(`    INSERT INTO messages (id, from_user_id, to_user_id, text, attachments_json, created_at) VALUES (?, ?, ?, ?, ?, ?)
 `).run(id, req.user.id, req.params.friendId, bodyText, JSON.stringify(attachments || []), now);
 
-await db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
+  const senderRow = await db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
   const senderName = senderRow?.username || 'Друг';
   const { notifyNewMessage } = require('../db/push');
   notifyNewMessage(req.params.friendId, senderName, bodyText, req.user.id)
     .catch(err => console.warn('Message push:', err.message));
 
-  const newAchievements = checkAndUnlock(req.user.id);
+  const newAchievements = await checkAndUnlock(req.user.id);
   res.json({
     message: {
       id,
@@ -1061,7 +1061,7 @@ await db.prepare(`    INSERT INTO conversation_messages (id, conversation_id, fr
     VALUES (?, ?, ?, ?, ?, ?)
 `).run(id, req.params.id, req.user.id, bodyText, JSON.stringify(attachments || []), now);
 
-await db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
+  const senderRow = await db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
   res.json({
     message: {
       id,
@@ -1080,25 +1080,25 @@ router.get('/stats', authMiddleware, async (req, res) => {
   const db = getDb();
   const userId = req.user.id;
 
-await db.prepare(`    SELECT date(updated_at) as day, COUNT(*) as count FROM tasks
+  const completedByDay = await db.prepare(`    SELECT date(updated_at) as day, COUNT(*) as count FROM tasks
     WHERE status = 'completed' AND (owner_id = ? OR assignees_json LIKE ?)
     GROUP BY date(updated_at)
     ORDER BY day DESC LIMIT 30
 `).all(userId, `%"${userId}"%`);
 
-await db.prepare(`    SELECT priority, COUNT(*) as count FROM tasks
+  const byPriority = await db.prepare(`    SELECT priority, COUNT(*) as count FROM tasks
     WHERE owner_id = ? OR assignees_json LIKE ?
     GROUP BY priority
 `).all(userId, `%"${userId}"%`);
 
-await db.prepare(`    SELECT status, COUNT(*) as count FROM tasks
+  const byStatus = await db.prepare(`    SELECT status, COUNT(*) as count FROM tasks
     WHERE owner_id = ? OR assignees_json LIKE ?
     GROUP BY status
 `).all(userId, `%"${userId}"%`);
 
-await db.prepare(`    SELECT p.id, p.name,
-      SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed,
-      COUNT(t.id) as total
+  const projectsProgress = await db.prepare(`    SELECT p.id, p.name,
+    SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed,
+    COUNT(t.id) as total
     FROM projects p
     LEFT JOIN project_members pm ON pm.project_id = p.id
     LEFT JOIN tasks t ON t.project_id = p.id
@@ -1127,7 +1127,7 @@ if (!await userCanAccessProject(req.user.id, req.params.projectId)) {
     return res.status(403).json({ error: 'Нет доступа' });
   }
   const db = getDb();
-await db.prepare('SELECT * FROM mind_maps WHERE project_id = ?').get(req.params.projectId);
+  let row = await db.prepare('SELECT * FROM mind_maps WHERE project_id = ?').get(req.params.projectId);
   if (!row) {
     const now = new Date().toISOString();
     await db.prepare(`
@@ -1217,7 +1217,7 @@ await db.prepare(`    UPDATE notes SET title = ?, content = ?, color = ?, tags_j
     req.params.id,
     req.user.id
   );
-await db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
+  const row = await db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
   res.json({ note: rowToNote(row) });
 });
 
