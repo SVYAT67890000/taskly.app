@@ -5,5 +5,5 @@ meta:
     version: 20
 
 run:
-  command: npm start
+  scriptName: server.js
   containerPort: 3000
