@@ -824,7 +824,7 @@ router.get('/messages/:friendId', authMiddleware, async (req, res) => {
     to: r.to_user_id,
     text: r.text,
     attachments: parseJson(r.attachments_json, []),
-    timestamp: r.created_at
+    timestamp: Number(r.created_at)
   })));
 });
 
@@ -911,7 +911,7 @@ router.get('/messages/feed', authMiddleware, async (req, res) => {
     from: r.from_user_id,
     to: r.to_user_id,
     text: r.text,
-    timestamp: r.created_at,
+    timestamp: Number(r.created_at),
     senderName: r.sender_name,
     kind: 'direct'
   }));
@@ -921,7 +921,7 @@ router.get('/messages/feed', authMiddleware, async (req, res) => {
     from: r.from_user_id,
     conversationId: r.conversation_id,
     text: r.text,
-    timestamp: r.created_at,
+    timestamp: Number(r.created_at),
     senderName: r.sender_name,
     convName: r.conv_name,
     kind: 'group'
@@ -958,7 +958,7 @@ router.get('/messages/inbox', authMiddleware, async (req, res) => {
         id: r.id,
         from: r.from_user_id,
         text: r.text,
-        timestamp: r.created_at,
+        timestamp: Number(r.created_at),
         senderName: r.sender_name,
         kind: 'direct'
       })),
@@ -967,7 +967,7 @@ router.get('/messages/inbox', authMiddleware, async (req, res) => {
         from: r.from_user_id,
         conversationId: r.conversation_id,
         text: r.text,
-        timestamp: r.created_at,
+        timestamp: Number(r.created_at),
         senderName: r.sender_name,
         convName: r.conv_name,
         kind: 'group'
@@ -994,7 +994,7 @@ router.get('/conversations', authMiddleware, async (req, res) => {
       name: row.name,
       ownerId: row.owner_id,
       memberIds: members.map(r => r.user_id),
-      createdAt: row.created_at
+      createdAt: Number(row.created_at)
     });
   }
   res.json({ conversations: convs });
@@ -1056,7 +1056,7 @@ router.get('/conversations/:id/messages', authMiddleware, async (req, res) => {
       conversationId: r.conversation_id,
       text: r.text,
       attachments: parseJson(r.attachments_json, []),
-      timestamp: r.created_at,
+      timestamp: Number(r.created_at),
       senderName: r.sender_name
     }))
   });
@@ -1315,7 +1315,7 @@ router.post('/uploads', authMiddleware, async (req, res) => {
 
 router.get('/uploads/:userId/:fileName', authMiddleware, async (req, res) => {
   if (req.user.id !== req.params.userId) {
-    await getDb().prepare(
+    const isFriend = await getDb().prepare(
       'SELECT 1 FROM friendships WHERE user_id = ? AND friend_id = ?'
     ).get(req.user.id, req.params.userId);
     if (!isFriend) return res.status(403).json({ error: 'Нет доступа' });
