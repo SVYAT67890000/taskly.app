@@ -170,7 +170,7 @@ async function fetchRelatedUsers(db, userId) {
   const idList = [...ids];
   if (!idList.length) return [];
   const placeholders = idList.map(() => '?').join(',');
-  return await db.prepare(`SELECT * FROM users WHERE id IN (${placeholders})`).all(...idList).map(formatUser);
+  return (await db.prepare(`SELECT * FROM users WHERE id IN (${placeholders})`).all(...idList)).map(formatUser);
 }
 
 async function getFriendRequestsForUser(db, userId) {
@@ -216,7 +216,7 @@ if (await (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email.trim())))
 router.post('/auth/login', async (req, res) => {
   const { email, password } = req.body || {};
   const db = getDb();
-await db.prepare('SELECT * FROM users WHERE email = ?').get((email || '').trim());
+  const row = await db.prepare('SELECT * FROM users WHERE email = ?').get((email || '').trim());
   if (!row || !verifyPassword(row, password)) {
     return res.status(401).json({ error: 'Неверный email или пароль' });
   }
@@ -791,9 +791,9 @@ await db.prepare('DELETE FROM friendships WHERE user_id = ? AND friend_id = ?').
 
 router.get('/friends', authMiddleware, async (req, res) => {
   const db = getDb();
-  await db.prepare(
+  const friendIds = (await db.prepare(
     'SELECT friend_id FROM friendships WHERE user_id = ?'
-  ).all(req.user.id).map(r => r.friend_id);
+  ).all(req.user.id)).map(r => r.friend_id);
 
 const { incoming, outgoing } = await getFriendRequestsForUser(db, req.user.id);
 const users = await fetchRelatedUsers(db, req.user.id);
@@ -956,20 +956,24 @@ await db.prepare(`    SELECT cm.id, cm.conversation_id, cm.from_user_id, cm.text
 // ——— Group conversations ———
 router.get('/conversations', authMiddleware, async (req, res) => {
   const db = getDb();
-await db.prepare(`    SELECT c.* FROM conversations c
+  const rows = await db.prepare(`    SELECT c.* FROM conversations c
     JOIN conversation_members m ON m.conversation_id = c.id
     WHERE m.user_id = ?
     ORDER BY c.created_at DESC
 `).all(req.user.id);
 
   const memberStmt = db.prepare('SELECT user_id FROM conversation_members WHERE conversation_id = ?');
-  const convs = rows.map(row => ({
-    id: row.id,
-    name: row.name,
-    ownerId: row.owner_id,
-    memberIds: memberStmt.all(row.id).map(r => r.user_id),
-    createdAt: row.created_at
-  }));
+  const convs = [];
+  for (const row of rows) {
+    const members = await memberStmt.all(row.id);
+    convs.push({
+      id: row.id,
+      name: row.name,
+      ownerId: row.owner_id,
+      memberIds: members.map(r => r.user_id),
+      createdAt: row.created_at
+    });
+  }
   res.json({ conversations: convs });
 });
 
@@ -1160,7 +1164,7 @@ if (!await userCanAccessProject(req.user.id, req.params.projectId)) {
 
 // ——— Notes ———
 router.get('/notes', authMiddleware, async (req, res) => {
-  await getDb().prepare(
+  const rows = await getDb().prepare(
     'SELECT * FROM notes WHERE user_id = ? ORDER BY pinned DESC, updated_at DESC'
   ).all(req.user.id);
   res.json(rows.map(rowToNote));

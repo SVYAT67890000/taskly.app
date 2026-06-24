@@ -42,7 +42,7 @@ async function getStats(userId) {
     SELECT COUNT(*) as c FROM mind_maps mm
     JOIN project_members pm ON pm.project_id = mm.project_id
     WHERE pm.user_id = ? AND mm.updated_by = ?
-  `).get(userId))?.c || 0;
+  `).get(userId, userId))?.c || 0;
 
   return {
     completedTasks: totalCompleted,
