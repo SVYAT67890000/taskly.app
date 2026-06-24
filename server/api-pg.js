@@ -384,7 +384,7 @@ router.patch('/users/me', authMiddleware, async (req, res) => {
   }
 
   const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  const newAchievements = checkAndUnlock(req.user.id);
+  const newAchievements = await checkAndUnlock(req.user.id);
   res.json({ user: formatUser(row), newAchievements });
 });
 
@@ -420,7 +420,7 @@ router.post('/users/password', authMiddleware, async (req, res) => {
   }
 
   const db = getDb();
-await db.prepare('SELECT code, expires_at FROM password_codes WHERE user_id = ?').get(req.user.id);
+  const stored = await db.prepare('SELECT code, expires_at FROM password_codes WHERE user_id = ?').get(req.user.id);
   if (!stored || Date.now() > stored.expires_at) {
 await db.prepare('DELETE FROM password_codes WHERE user_id = ?').run(req.user.id);
     return res.status(400).json({ error: 'Код просрочен или не запрашивался' });
@@ -835,7 +835,7 @@ router.post('/messages/:friendId', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Пустое сообщение' });
   }
 
-  await db.prepare(
+  const friend = await db.prepare(
     'SELECT 1 FROM friendships WHERE user_id = ? AND friend_id = ?'
   ).get(req.user.id, req.params.friendId);
   if (!friend) return res.status(403).json({ error: 'Не в друзьях' });
@@ -1192,8 +1192,9 @@ await db.prepare(`    INSERT INTO notes (id, user_id, title, content, color, tag
     now,
     now
   );
-  const newAchievements = checkAndUnlock(req.user.id);
-  await res.json({ note: rowToNote(db.prepare('SELECT * FROM notes WHERE id = ?').get(id)), newAchievements });
+  const newAchievements = await checkAndUnlock(req.user.id);
+  const note = await db.prepare('SELECT * FROM notes WHERE id = ?').get(id);
+  res.json({ note: rowToNote(note), newAchievements });
 });
 
 router.put('/notes/:id', authMiddleware, async (req, res) => {
@@ -1273,12 +1274,12 @@ router.get('/uploads/:userId/:fileName', authMiddleware, async (req, res) => {
 router.get('/friends/:friendId/shared-tasks', authMiddleware, async (req, res) => {
   const db = getDb();
   const friendId = req.params.friendId;
-  await db.prepare(
+  const isFriend = await db.prepare(
     'SELECT 1 FROM friendships WHERE user_id = ? AND friend_id = ?'
   ).get(req.user.id, friendId);
   if (!isFriend) return res.status(403).json({ error: 'Не в друзьях' });
 
-await db.prepare(`    SELECT * FROM tasks WHERE owner_id = ? AND share_with_friends = 1 AND status != 'completed'
+  const rows = await db.prepare(`    SELECT * FROM tasks WHERE owner_id = ? AND share_with_friends = 1 AND status != 'completed'
     ORDER BY date ASC
 `).all(friendId);
   res.json(rows.map(rowToTask));
