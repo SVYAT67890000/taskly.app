@@ -25,7 +25,8 @@ function prepare(sql) {
       return res.rows;
     },
     run: async (...params) => {
-      await p.query(converted, params);
+      const res = await p.query(converted, params);
+      return { rowCount: res.rowCount || 0 };
     }
   };
 }

@@ -431,7 +431,7 @@ async function seedPgAchievements() {
   const pg = require('./pg');
   for (const a of ACHIEVEMENTS_CATALOG) {
     await pg.prepare(
-      `INSERT INTO achievements (id, title, description, icon, category) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`
+      `INSERT INTO achievements (id, title, description, icon, category) VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING`
     ).run(a.id, a.title, a.description, a.icon, a.category);
   }
 }

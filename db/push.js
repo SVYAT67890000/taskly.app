@@ -46,32 +46,32 @@ async function saveSubscription(userId, subscription) {
   const now = new Date().toISOString();
   await db.prepare(`
     INSERT INTO push_subscriptions (id, user_id, endpoint, keys_json, created_at)
-    VALUES ($1, $2, $3, $4, $5)
-    ON CONFLICT (id) DO UPDATE SET endpoint = $3, keys_json = $4
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT (id) DO UPDATE SET endpoint = ?, keys_json = ?
   `).run(id, userId, subscription.endpoint, JSON.stringify(subscription.keys), now);
 }
 
 async function removeSubscription(userId, endpoint) {
-  await getDb().prepare('DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2')
+  await getDb().prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?')
     .run(userId, endpoint);
 }
 
 async function getUserSubscriptions(userId) {
-  return await getDb().prepare('SELECT * FROM push_subscriptions WHERE user_id = $1').all(userId);
+  return await getDb().prepare('SELECT * FROM push_subscriptions WHERE user_id = ?').all(userId);
 }
 
 async function getUserTasksForReminders(userId) {
   const db = getDb();
   return await db.prepare(`
     SELECT t.* FROM tasks t
-    LEFT JOIN project_members pm ON pm.project_id = t.project_id AND pm.user_id = $1
+    LEFT JOIN project_members pm ON pm.project_id = t.project_id AND pm.user_id = ?
     WHERE t.status != 'completed'
-      AND (t.owner_id = $1 OR pm.user_id IS NOT NULL OR t.assignees_json LIKE $2)
+      AND (t.owner_id = ? OR pm.user_id IS NOT NULL OR t.assignees_json LIKE ?)
   `).all(userId, `%"${userId}"%`);
 }
 
 async function getUserLeadDays(userId) {
-  const row = await getDb().prepare('SELECT preferences_json FROM users WHERE id = $1').get(userId);
+  const row = await getDb().prepare('SELECT preferences_json FROM users WHERE id = ?').get(userId);
   if (!row) return 1;
   try {
     const prefs = JSON.parse(row.preferences_json || '{}');
@@ -83,7 +83,7 @@ async function getUserLeadDays(userId) {
 
 async function wasReminderSent(userId, taskId, taskDate) {
   const row = await getDb().prepare(
-    'SELECT 1 FROM push_reminder_log WHERE user_id = $1 AND task_id = $2 AND task_date = $3'
+    'SELECT 1 FROM push_reminder_log WHERE user_id = ? AND task_id = ? AND task_date = ?'
   ).get(userId, taskId, taskDate);
   return !!row;
 }
@@ -91,7 +91,7 @@ async function wasReminderSent(userId, taskId, taskDate) {
 async function markReminderSent(userId, taskId, taskDate) {
   await getDb().prepare(`
     INSERT INTO push_reminder_log (user_id, task_id, task_date, sent_at)
-    VALUES ($1, $2, $3, $4)
+    VALUES (?, ?, ?, ?)
     ON CONFLICT (user_id, task_id, task_date) DO NOTHING
   `).run(userId, taskId, taskDate, new Date().toISOString());
 }
@@ -171,7 +171,7 @@ function startReminderPushJob() {
 }
 
 async function getUserNotificationPrefs(userId) {
-  const row = await getDb().prepare('SELECT preferences_json FROM users WHERE id = $1').get(userId);
+  const row = await getDb().prepare('SELECT preferences_json FROM users WHERE id = ?').get(userId);
   try {
     const prefs = JSON.parse(row?.preferences_json || '{}');
     const n = prefs.notifications || {};

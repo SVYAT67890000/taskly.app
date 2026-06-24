@@ -51,14 +51,14 @@ async function findUserByTagOrPublicId(query) {
   const trimmed = (query || '').trim();
 
   const publicMatch = await db.prepare(
-    'SELECT * FROM users WHERE public_id = $1'
+    'SELECT * FROM users WHERE public_id = ?'
   ).get(trimmed.toUpperCase());
   if (publicMatch) return publicMatch;
 
   const tagMatch = trimmed.match(/^(.+?)#(\d{4})$/);
   if (tagMatch) {
     return await db.prepare(
-      'SELECT * FROM users WHERE username = $1 AND discriminator = $2'
+      'SELECT * FROM users WHERE username = ? AND discriminator = ?'
     ).get(tagMatch[1].trim(), tagMatch[2]);
   }
 
@@ -67,7 +67,7 @@ async function findUserByTagOrPublicId(query) {
   }
 
   return await db.prepare(
-    'SELECT * FROM users WHERE username = $1'
+    'SELECT * FROM users WHERE username = ?'
   ).get(trimmed);
 }
 
@@ -79,7 +79,7 @@ async function createUser({ username, email, password, personalDataConsent = fal
   do {
     discriminator = generateDiscriminator();
     const clash = await db.prepare(
-      'SELECT 1 FROM users WHERE username = $1 AND discriminator = $2'
+      'SELECT 1 FROM users WHERE username = ? AND discriminator = ?'
     ).get(username, discriminator);
     if (!clash) break;
     attempts++;
@@ -89,7 +89,7 @@ async function createUser({ username, email, password, personalDataConsent = fal
   attempts = 0;
   do {
     publicId = generatePublicId();
-    const clash = await db.prepare('SELECT 1 FROM users WHERE public_id = $1').get(publicId);
+    const clash = await db.prepare('SELECT 1 FROM users WHERE public_id = ?').get(publicId);
     if (!clash) break;
     attempts++;
   } while (attempts < 20);
@@ -105,10 +105,10 @@ async function createUser({ username, email, password, personalDataConsent = fal
 
   await db.prepare(`
     INSERT INTO users (id, username, discriminator, email, password_hash, public_id, avatar_json, preferences_json, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, username, discriminator, email, passwordHash, publicId, avatarJson, prefsJson, now);
 
-  return formatUser(await db.prepare('SELECT * FROM users WHERE id = $1').get(id));
+  return formatUser(await db.prepare('SELECT * FROM users WHERE id = ?').get(id));
 }
 
 function verifyPassword(row, password) {
@@ -119,26 +119,26 @@ async function createSession(userId) {
   const db = getDb();
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-  await db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)').run(token, userId, expiresAt);
+  await db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, expiresAt);
   return token;
 }
 
 async function getUserByToken(token) {
   const db = getDb();
-  const session = await db.prepare('SELECT * FROM sessions WHERE token = $1').get(token);
+  const session = await db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
   if (!session || session.expires_at < Date.now()) return null;
-  const row = await db.prepare('SELECT * FROM users WHERE id = $1').get(session.user_id);
+  const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id);
   return formatUser(row);
 }
 
 async function deleteSession(token) {
   const db = getDb();
-  await db.prepare('DELETE FROM sessions WHERE token = $1').run(token);
+  await db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
 }
 
 async function deleteAllUserSessions(userId) {
   const db = getDb();
-  await db.prepare('DELETE FROM sessions WHERE user_id = $1').run(userId);
+  await db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
 }
 
 module.exports = {
